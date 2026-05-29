@@ -1,0 +1,19 @@
+{
+  "name": "labesa-movilidad",
+  "version": "1.0.0",
+  "private": true,
+  "description": "App web responsive para administracion integral de flotilla vehicular LaBesa Movilidad.",
+  "scripts": {
+    "dev": "npx serve .",
+    "build": "node -e \"console.log('Static app: no build step required')\""
+  },
+  "keywords": [
+    "labesa",
+    "movilidad",
+    "flotilla",
+    "supabase",
+    "netlify"
+  ],
+  "author": "LaBesa Movilidad",
+  "license": "UNLICENSED"
+}

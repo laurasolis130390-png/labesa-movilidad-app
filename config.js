@@ -1,0 +1,7 @@
+window.LABESA_CONFIG = {
+  SUPABASE_URL: "",
+  SUPABASE_ANON_KEY: "",
+  WIALON_API_URL: "",
+  WIALON_TOKEN: "",
+  WIALON_UNIT_ID: ""
+};

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#061B33" />
+    <title>LaBesa Movilidad</title>
+    <link rel="icon" href="assets/logo-labesa-oficial.jpeg" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <section id="login-screen" class="login-screen">
+      <div class="login-panel">
+        <img class="login-logo" src="assets/logo-labesa-oficial.jpeg" alt="LaBesa Movilidad" />
+        <h1>Control integral de flotilla</h1>
+        <p>Administracion, documentos, servicios, GPS y finanzas en una sola plataforma.</p>
+        <form id="login-form" class="auth-form">
+          <label>
+            Correo
+            <input id="login-email" type="email" autocomplete="email" placeholder="correo@labesa.com" required />
+          </label>
+          <label>
+            Contrasena
+            <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+          </label>
+          <button class="primary-btn" type="submit">Iniciar sesion</button>
+          <button class="ghost-btn" id="demo-login" type="button">Entrar en modo revision</button>
+        </form>
+        <p id="auth-message" class="form-message"></p>
+      </div>
+    </section>
+
+    <main id="app-shell" class="app-shell is-hidden">
+      <aside class="sidebar">
+        <img class="sidebar-logo" src="assets/logo-labesa-oficial.jpeg" alt="LaBesa Movilidad" />
+        <nav id="main-menu" class="main-menu" aria-label="Menu principal"></nav>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">LaBesa Movilidad</p>
+            <h2 id="view-title">Dashboard general</h2>
+          </div>
+          <div class="topbar-actions">
+            <button id="sync-btn" class="icon-btn" type="button" title="Sincronizar">↻</button>
+            <img class="topbar-logo" src="assets/logo-labesa-oficial.jpeg" alt="LaBesa Movilidad" />
+          </div>
+        </header>
+
+        <section id="dashboard-view" class="view active-view"></section>
+        <section id="vehicles-view" class="view"></section>
+        <section id="drivers-view" class="view"></section>
+        <section id="documents-view" class="view"></section>
+        <section id="services-view" class="view"></section>
+        <section id="gps-view" class="view"></section>
+        <section id="finance-view" class="view"></section>
+      </section>
+
+      <nav id="bottom-nav" class="bottom-nav" aria-label="Navegacion movil"></nav>
+    </main>
+
+    <dialog id="record-dialog" class="record-dialog">
+      <form id="record-form" method="dialog">
+        <header>
+          <h3 id="dialog-title">Nuevo registro</h3>
+          <button class="icon-btn" type="button" id="close-dialog" title="Cerrar">×</button>
+        </header>
+        <div id="dialog-fields" class="dialog-fields"></div>
+        <menu>
+          <button class="ghost-btn" type="button" id="delete-record">Eliminar</button>
+          <button class="primary-btn" type="submit">Guardar</button>
+        </menu>
+      </form>
+    </dialog>
+  </body>
+</html>
