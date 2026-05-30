@@ -187,7 +187,7 @@ if ("serviceWorker" in navigator) {
 }
 
 function init() {
-  applyTheme(localStorage.getItem(THEME_KEY) || "dark");
+  applyTheme(localStorage.getItem(THEME_KEY) || "light");
   renderNavigation();
   bindAuth();
   bindDialog();
@@ -247,8 +247,15 @@ function showApp() {
 
 function renderNavigation() {
   const markup = modules.map((item) => navButton(item)).join("");
+  const mobileItems = [
+    modules.find((item) => item.id === "dashboard"),
+    modules.find((item) => item.id === "vehicles"),
+    modules.find((item) => item.id === "gps"),
+    modules.find((item) => item.id === "finance"),
+    { id: "documents", title: "Mas", icon: "M" }
+  ];
   $("#main-menu").innerHTML = markup;
-  $("#bottom-nav").innerHTML = markup;
+  $("#bottom-nav").innerHTML = mobileItems.map((item) => navButton(item)).join("");
   $$(".nav-btn").forEach((button) => {
     button.addEventListener("click", () => switchView(button.dataset.view));
   });
@@ -319,6 +326,32 @@ function renderDashboard() {
     </div>
     <button class="primary-btn wide-action" data-view="finance" type="button">Registrar ingreso o gasto</button>
 
+    <section class="module-panel chart-card">
+      <div class="panel-header">
+        <div>
+          <h3>Ingresos vs gastos</h3>
+          <p>Mes actual</p>
+        </div>
+        <strong>${money(balance)} utilidad</strong>
+      </div>
+      <div class="mini-bars" aria-label="Grafica visual de ingresos y gastos">
+        <span class="income" style="height: 56%"></span>
+        <span class="expense" style="height: 34%"></span>
+        <span class="income" style="height: 64%"></span>
+        <span class="expense" style="height: 38%"></span>
+        <span class="income" style="height: 78%"></span>
+        <span class="expense" style="height: 32%"></span>
+      </div>
+    </section>
+
+    <section class="module-panel profitability-card">
+      <h3>Rentabilidad por vehiculo</h3>
+      ${profitRow("LB-018", 92)}
+      ${profitRow("LB-031", 81)}
+      ${profitRow("LB-007", 74)}
+      ${profitRow("LB-024", 43)}
+    </section>
+
     <div class="dashboard-layout">
       <section class="module-panel">
         <div class="panel-header">
@@ -382,6 +415,10 @@ function renderDashboard() {
 }
 
 function renderModule(type, title, subtitle) {
+  if (type === "gps") {
+    renderGpsModule(title, subtitle);
+    return;
+  }
   const records = state[type] || [];
   const view = $(`#${type}-view`);
   view.innerHTML = `
@@ -410,6 +447,72 @@ function renderModule(type, title, subtitle) {
     </section>
   `;
   bindModule(type);
+}
+
+function renderGpsModule(title, subtitle) {
+  const records = state.gps || [];
+  const view = $("#gps-view");
+  view.innerHTML = `
+    <div class="screen-heading">
+      <h3>GPS en tiempo real</h3>
+      <p>Monitoreo operativo conectado a Wialon mediante token API.</p>
+    </div>
+    <section class="module-panel wialon-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Conexion Wialon</h3>
+          <p>${CONFIG.WIALON_TOKEN ? "Wialon configurado" : "Wialon sin conectar"}</p>
+        </div>
+      </div>
+      <div class="wialon-box">
+        <label>
+          Servidor Wialon
+          <select>
+            <option>https://hst-api.wialon.com</option>
+          </select>
+        </label>
+        <label>
+          Token API Wialon
+          <input type="password" placeholder="Pega aqui tu token de Wialon" />
+        </label>
+        <div class="wialon-actions">
+          <button class="primary-btn" type="button">Conectar Wialon</button>
+          <button class="ghost-btn" type="button">Actualizar GPS</button>
+          <button class="danger-btn" type="button">Desconectar</button>
+        </div>
+      </div>
+    </section>
+    <section class="gps-map" aria-label="Mapa GPS visual">
+      <span class="orbit orbit-one"></span>
+      <span class="orbit orbit-two"></span>
+      <i class="pin pin-a"></i>
+      <i class="pin pin-b"></i>
+      <i class="pin pin-c"></i>
+    </section>
+    <section class="module-panel">
+      <div class="panel-header">
+        <div>
+          <h3>${title}</h3>
+          <p>${subtitle}</p>
+        </div>
+        <button class="primary-btn" data-create="gps" type="button">Agregar</button>
+      </div>
+      <div class="records-grid" data-grid="gps">
+        ${records.map((record) => recordCard("gps", record)).join("") || `<div class="empty-state">No hay unidades GPS registradas.</div>`}
+      </div>
+    </section>
+  `;
+  bindModule("gps");
+}
+
+function profitRow(code, percent) {
+  return `
+    <div class="profit-row">
+      <strong>${code}</strong>
+      <span><i style="width:${percent}%"></i></span>
+      <em>${percent}%</em>
+    </div>
+  `;
 }
 
 function renderFinance() {
