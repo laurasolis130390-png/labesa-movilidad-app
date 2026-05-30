@@ -1,4 +1,4 @@
-# LaBesa Movilidad
+# LaBeSa Movilidad
 
 App web responsive para administracion integral de flotilla vehicular.
 
@@ -49,7 +49,7 @@ En esta maquina `git` no esta disponible desde la terminal actual. Cuando este i
 ```bash
 git init
 git add .
-git commit -m "Crear app LaBesa Movilidad"
+git commit -m "Crear app LaBeSa Movilidad"
 git branch -M main
 git remote add origin https://github.com/TU_USUARIO/labesa-movilidad.git
 git push -u origin main

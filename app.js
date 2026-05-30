@@ -5,6 +5,7 @@ const supabaseClient = hasSupabase
   : null;
 
 const STORE_KEY = "labesa-movilidad-local";
+const THEME_KEY = "labesa-movilidad-theme";
 const today = new Date();
 
 const modules = [
@@ -186,6 +187,7 @@ if ("serviceWorker" in navigator) {
 }
 
 function init() {
+  applyTheme(localStorage.getItem(THEME_KEY) || "dark");
   renderNavigation();
   bindAuth();
   bindDialog();
@@ -217,12 +219,24 @@ function bindAuth() {
     await syncFromSupabase();
     renderAll();
   });
+  $("#theme-toggle").addEventListener("click", () => {
+    const nextTheme = document.body.classList.contains("light-theme") ? "dark" : "light";
+    applyTheme(nextTheme);
+  });
   $("#logout-btn").addEventListener("click", async () => {
     if (hasSupabase) await supabaseClient.auth.signOut();
     $("#app-shell").classList.add("is-hidden");
     $("#login-screen").classList.remove("is-hidden");
     $("#login-password").value = "";
   });
+}
+
+function applyTheme(theme) {
+  const isLight = theme === "light";
+  document.body.classList.toggle("light-theme", isLight);
+  localStorage.setItem(THEME_KEY, isLight ? "light" : "dark");
+  const button = $("#theme-toggle");
+  if (button) button.textContent = isLight ? "Oscuro" : "Claro";
 }
 
 function showApp() {
@@ -279,9 +293,9 @@ function renderDashboard() {
 
   $("#dashboard-view").innerHTML = `
     <section class="hero-card">
-      <img class="hero-logo" src="assets/logo-labesa-oficial.jpeg" alt="LaBesa Movilidad" />
+      <img class="hero-logo" src="assets/logo-labesa-oficial.jpeg" alt="LaBeSa Movilidad" />
       <div class="hero-copy">
-        <h3>LaBesa Control de Flotilla</h3>
+        <h3>LaBeSa Movilidad</h3>
         <p>Acercamos personas y negocios.</p>
         <span class="status-pill">Excelente</span>
       </div>

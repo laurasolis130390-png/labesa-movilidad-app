@@ -1,7 +1,7 @@
 {
-  "name": "LaBesa Movilidad",
-  "short_name": "LaBesa",
-  "description": "Control integral de flotilla vehicular LaBesa Movilidad.",
+  "name": "LaBeSa Movilidad",
+  "short_name": "LaBeSa",
+  "description": "Control integral de flotilla vehicular LaBeSa Movilidad.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
