@@ -343,23 +343,25 @@ function renderDashboard() {
     </div>
     <button class="primary-btn wide-action" data-view="finance" type="button">Registrar ingreso o gasto</button>
 
-    <section class="module-panel chart-card">
-      <div class="panel-header">
-        <div>
-          <h3>Ingresos vs gastos</h3>
-          <p>Mes actual</p>
+    <div class="insight-grid">
+      <section class="module-panel chart-card">
+        <div class="panel-header">
+          <div>
+            <h3>Ingresos vs gastos</h3>
+            <p>Mes actual</p>
+          </div>
+          <strong>${money(balance)} utilidad</strong>
         </div>
-        <strong>${money(balance)} utilidad</strong>
-      </div>
-      <div class="mini-bars" aria-label="Grafica visual de ingresos y gastos">
-        ${financeBars(income, expenses)}
-      </div>
-    </section>
+        <div class="mini-bars" aria-label="Grafica visual de ingresos y gastos">
+          ${financeBars(income, expenses)}
+        </div>
+      </section>
 
-    <section class="module-panel profitability-card">
-      <h3>Rentabilidad por vehiculo</h3>
-      ${vehicleProfitRows.length ? vehicleProfitRows.map((row) => profitRow(row.label, row.percent, row.balance)).join("") : `<div class="empty-state">Sin datos financieros por vehiculo.</div>`}
-    </section>
+      <section class="module-panel profitability-card">
+        <h3>Rentabilidad por vehiculo</h3>
+        ${vehicleProfitRows.length ? vehicleProfitRows.map((row) => profitRow(row.label, row.percent, row.balance)).join("") : `<div class="empty-state">Sin datos financieros por vehiculo.</div>`}
+      </section>
+    </div>
 
     <div class="dashboard-layout">
       <section class="module-panel">
@@ -707,7 +709,7 @@ function profitRow(code, percent, balance = 0) {
     <div class="profit-row">
       <strong>${code}</strong>
       <span><i style="width:${percent}%"></i></span>
-      <em>${percent}% · ${money(balance)}</em>
+      <em>${percent}% - ${money(balance)}</em>
     </div>
   `;
 }
@@ -739,7 +741,7 @@ function loanRow(record) {
     <button class="list-row loan-row" data-edit-type="loans" data-id="${record.id}" type="button">
       <span>
         <strong>${record.borrower_name || "Prestamo"}</strong>
-        <small>${record.vehicle_code || "Sin vehiculo"} · Prestado ${money(record.amount || 0)} · Recuperado ${money(record.recovered_amount || 0)}</small>
+        <small>${record.vehicle_code || "Sin vehiculo"} - Prestado ${money(record.amount || 0)} - Recuperado ${money(record.recovered_amount || 0)}</small>
       </span>
       <span>
         <b>${money(outstanding)}</b>
@@ -817,7 +819,7 @@ function renderFinance() {
 
     <div class="dashboard-layout">
       ${financePanel("income", "Ingresos", "Crear ingresos por vehiculo, chofer y periodo.")}
-      ${financePanel("expenses", "Egresos", "Registrar gastos por categoria y comprobante.")}
+      ${financePanel("expenses", "Egresos", "Registrar gastos por vehiculo y categoria.")}
     </div>
   `;
   bindModule("income");
@@ -898,7 +900,7 @@ function financeRow(type, record) {
     <button class="list-row" data-edit-type="${type}" data-id="${record.id}" type="button">
       <span>
         <strong>${record.concept || "Movimiento"}</strong>
-        <small>${record.vehicle_code || "Sin vehiculo"} · ${record.date || "Sin fecha"}</small>
+        <small>${record.vehicle_code || "Sin vehiculo"} - ${record.date || "Sin fecha"}</small>
       </span>
       <span class="traffic ${type === "income" ? "green" : "red"}">${money(amount)}</span>
     </button>
@@ -1117,7 +1119,7 @@ function collectAlerts() {
     ].forEach(([label, dateValue]) => {
       if (!dateValue) return;
       items.push({
-        title: `${label} · ${vehicleKey(vehicle) || "Vehiculo"}`,
+        title: `${label} - ${vehicleKey(vehicle) || "Vehiculo"}`,
         detail: vehicle.model || vehicle.plates || "Calendario del vehiculo",
         status: statusFromDate(dateValue)
       });
@@ -1180,7 +1182,7 @@ function metaFor(type, record) {
 }
 
 function getTitle(type, record) {
-  if (type === "vehicles") return `${record.internal_code || "Unidad"} · ${record.brand || ""} ${record.model || ""}`.trim();
+  if (type === "vehicles") return `${record.internal_code || "Unidad"} - ${record.brand || ""} ${record.model || ""}`.trim();
   if (type === "drivers") return record.full_name || "Chofer";
   if (type === "documents") return record.document_name || "Documento";
   if (type === "services") return record.service_type || "Servicio";
@@ -1229,7 +1231,7 @@ function isoDate(offsetDays) {
 }
 
 function initials(text) {
-  return String(text || "LB").split(/\s|·/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+  return String(text || "LB").split(/\s|-/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
 }
 
 function escapeHtml(value) {
