@@ -5,7 +5,7 @@
   "description": "App web responsive para administracion integral de flotilla vehicular LaBesa Movilidad.",
   "scripts": {
     "dev": "npx serve .",
-    "build": "node -e \"console.log('Static app: no build step required')\""
+    "build": "node scripts/write-config.js"
   },
   "keywords": [
     "labesa",

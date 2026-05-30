@@ -17,19 +17,20 @@ El logotipo oficial esta guardado en `assets/logo-labesa-oficial.jpeg`. Los valo
 
 ## Supabase
 
-Configura las credenciales publicas en `config.js`:
+En Netlify configura estas variables de entorno:
 
-```js
-window.LABESA_CONFIG = {
-  SUPABASE_URL: "https://tu-proyecto.supabase.co",
-  SUPABASE_ANON_KEY: "tu-anon-key",
-  WIALON_API_URL: "",
-  WIALON_TOKEN: "",
-  WIALON_UNIT_ID: ""
-};
+```bash
+SUPABASE_URL=https://tu-proyecto.supabase.co
+SUPABASE_ANON_KEY=tu-anon-key
 ```
 
-La app esta preparada para usar Auth, base de datos y storage de Supabase desde el navegador.
+Durante el deploy, `npm run build` genera `config.js` con esas variables. La app esta preparada para usar Auth, base de datos y storage de Supabase desde el navegador.
+
+Para que 2 usuarios de la misma empresa vean y editen los mismos datos, ejecuta en Supabase:
+
+1. `supabase/schema.sql`
+2. `supabase/shared-access-policies.sql`
+3. `supabase/shared-storage-policies.sql`
 
 ## Netlify
 
