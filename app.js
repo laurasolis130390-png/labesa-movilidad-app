@@ -498,16 +498,21 @@ function bindDialog() {
         }
       }
     }
+
+    const saved = await upsertRemote(activeRecordType, record);
+    if (!saved) return;
+
+    await syncFromSupabase();
     const existingIndex = state[activeRecordType].findIndex((item) => item.id === record.id);
     if (existingIndex >= 0) {
       state[activeRecordType][existingIndex] = { ...state[activeRecordType][existingIndex], ...record };
-    } else {
+    } else if (!hasSupabase) {
       state[activeRecordType].push(record);
     }
-    await upsertRemote(activeRecordType, record);
     persist();
     $("#record-dialog").close();
     renderAll();
+    alert("Guardado correctamente.");
   });
 }
 
@@ -547,21 +552,33 @@ async function syncFromSupabase() {
   if (!hasSupabase) return;
   for (const [key, table] of Object.entries(tableMap)) {
     const { data, error } = await supabaseClient.from(table).select("*").order("created_at", { ascending: false });
-    if (!error && Array.isArray(data)) state[key] = data;
+    if (error) {
+      alert(`No se pudieron cargar datos de ${table}: ${error.message}`);
+    } else if (Array.isArray(data)) {
+      state[key] = data;
+    }
   }
   persist();
 }
 
 async function upsertRemote(type, record) {
-  if (!hasSupabase) return;
+  if (!hasSupabase) return true;
   const table = tableMap[type];
-  if (!table) return;
+  if (!table) return false;
   const { data: sessionData } = await supabaseClient.auth.getSession();
+  if (!sessionData.session?.user?.id) {
+    alert("Tu sesion expiro. Inicia sesion otra vez antes de guardar.");
+    return false;
+  }
   if (sessionData.session?.user?.id && !record.user_id) {
     record.user_id = sessionData.session.user.id;
   }
   const { error } = await supabaseClient.from(table).upsert(record);
-  if (error) alert(`No se pudo guardar en Supabase: ${error.message}`);
+  if (error) {
+    alert(`No se pudo guardar en Supabase: ${error.message}`);
+    return false;
+  }
+  return true;
 }
 
 async function deleteRemote(type, id) {
