@@ -207,6 +207,7 @@ function init() {
   renderNavigation();
   bindAuth();
   bindDialog();
+  bindVehicleProfileDialog();
   renderAll();
   if (!hasSupabase) {
     $("#auth-message").textContent = "Modo revision: agrega credenciales Supabase en config.js para datos reales.";
@@ -788,7 +789,7 @@ function renderFinance() {
       ${statCard("Prestado", money(loans.lent), "Dinero entregado")}
       ${statCard("Recuperado", money(loans.recovered), "Dinero devuelto")}
       ${statCard("Por cobrar", money(loans.outstanding), "Saldo pendiente")}
-      ${statCard("Caja estimada", money(cashEstimate), "Utilidad - por cobrar")}
+      ${statCard("Caja disponible estimada", money(cashEstimate), "Utilidad - por cobrar")}
       ${statCard("Prestamos activos", loans.activeCount, "Pendientes/parciales")}
     </div>
 
@@ -809,7 +810,7 @@ function renderFinance() {
       <div class="panel-header">
         <div>
           <h3>Balance por coche</h3>
-          <p>Ingresos, gastos, prestamos relacionados y caja neta.</p>
+          <p>Utilidad operativa por coche y caja despues de prestamos pendientes.</p>
         </div>
       </div>
       <div class="vehicle-finance-list">
@@ -847,6 +848,9 @@ function financePanel(type, title, subtitle) {
 function bindModule(type) {
   $$(`[data-create="${type}"]`).forEach((button) => button.addEventListener("click", () => openRecord(type)));
   $$(`[data-edit-type="${type}"]`).forEach((button) => button.addEventListener("click", () => openRecord(type, button.dataset.id)));
+  if (type === "vehicles") {
+    $$("[data-profile-id]").forEach((button) => button.addEventListener("click", () => openVehicleProfile(button.dataset.profileId)));
+  }
   const search = $(`[data-search="${type}"]`);
   const filter = $(`[data-filter="${type}"]`);
   const clear = $(`[data-clear="${type}"]`);
@@ -887,6 +891,7 @@ function recordCard(type, record) {
         <div class="badge-row">
           <span class="traffic ${status.key}">${status.label}</span>
           <span class="badge">${record.status || record.gps_status || record.document_name || record.service_type || "Registro"}</span>
+          ${type === "vehicles" ? `<button class="small-btn" data-profile-id="${record.id}" type="button">Ficha</button>` : ""}
           <button class="small-btn" data-edit-type="${type}" data-id="${record.id}" type="button">Editar</button>
         </div>
       </div>
@@ -967,6 +972,132 @@ function openRecord(type, id = null) {
   $("#delete-record").classList.toggle("is-hidden", !id);
   $("#dialog-fields").innerHTML = fieldSets[type].map((field) => inputForField(field, record)).join("");
   $("#record-dialog").showModal();
+}
+
+function bindVehicleProfileDialog() {
+  $("#close-profile-dialog")?.addEventListener("click", () => $("#vehicle-profile-dialog").close());
+}
+
+function openVehicleProfile(id) {
+  const vehicle = state.vehicles.find((item) => item.id === id);
+  if (!vehicle) return;
+  const code = vehicleKey(vehicle);
+  const finances = getVehicleProfitability().find((row) => row.label === code) || {
+    income: 0,
+    expenses: 0,
+    balance: 0,
+    loansOutstanding: 0,
+    cash: 0,
+    percent: 0
+  };
+  const driver = state.drivers.find((item) => item.vehicle_assigned === code || item.full_name === vehicle.driver_name);
+  const gps = state.gps.find((item) => item.vehicle_code === code);
+  const movements = [
+    ...state.income.filter((item) => item.vehicle_code === code).map((item) => ({ ...item, kind: "Ingreso" })),
+    ...state.expenses.filter((item) => item.vehicle_code === code).map((item) => ({ ...item, kind: "Egreso" }))
+  ].sort((a, b) => String(b.date || "").localeCompare(String(a.date || ""))).slice(0, 6);
+
+  $("#vehicle-profile-title").textContent = `Ficha - ${code || "Vehiculo"}`;
+  $("#vehicle-profile-body").innerHTML = `
+    <section class="profile-hero">
+      <div>
+        <strong>${escapeHtml(vehicle.brand || "Unidad")} ${escapeHtml(vehicle.model || "")}</strong>
+        <span>${escapeHtml(vehicle.plates || "Sin placas")} - ${escapeHtml(vehicle.status || "Sin estatus")}</span>
+      </div>
+      <span class="traffic ${vehicleCalendarStatus(vehicle).key}">${vehicleCalendarStatus(vehicle).label}</span>
+    </section>
+
+    <div class="profile-grid">
+      <article class="profile-box">
+        <h4>Datos del coche</h4>
+        ${profileLine("Codigo", code || "Sin codigo")}
+        ${profileLine("Tipo", vehicle.unit_type || "Sin tipo")}
+        ${profileLine("Anio", vehicle.year || "Sin anio")}
+        ${profileLine("Color", vehicle.color || "Sin color")}
+        ${profileLine("VIN", vehicle.vin || "Sin VIN")}
+      </article>
+
+      <article class="profile-box">
+        <h4>Chofer y GPS</h4>
+        ${profileLine("Chofer", driver?.full_name || vehicle.driver_name || "Sin asignar")}
+        ${profileLine("Telefono", driver?.phone || "Sin telefono")}
+        ${profileLine("GPS", gps?.gps_name || "Sin unidad GPS")}
+        ${profileLine("Conexion", gps?.last_connection || "Sin dato")}
+      </article>
+
+      <article class="profile-box profile-box-wide">
+        <h4>Calendario</h4>
+        <div class="profile-calendar">
+          ${vehicleCalendarRows(vehicle)}
+        </div>
+      </article>
+
+      <article class="profile-box profile-box-wide">
+        <h4>Finanzas del coche</h4>
+        <div class="vehicle-finance-grid">
+          <span><small>Ingresos</small><b>${money(finances.income)}</b></span>
+          <span><small>Gastos</small><b>${money(finances.expenses)}</b></span>
+          <span><small>Utilidad</small><b>${money(finances.balance)}</b></span>
+          <span><small>Caja disponible</small><b>${money(finances.cash)}</b></span>
+          <span><small>Prestamos por cobrar</small><b>${money(finances.loansOutstanding)}</b></span>
+          <span><small>Rentabilidad</small><b>${finances.percent}%</b></span>
+        </div>
+      </article>
+
+      <article class="profile-box profile-box-wide">
+        <h4>Ultimos movimientos</h4>
+        <div class="finance-list">
+          ${movements.length ? movements.map(profileMovementRow).join("") : `<div class="empty-state">Sin movimientos para este coche.</div>`}
+        </div>
+      </article>
+
+      <article class="profile-box profile-box-wide">
+        <h4>Servicios y notas</h4>
+        ${profileLine("Proximo servicio", vehicle.next_service_date || "Sin fecha")}
+        ${profileLine("Notas de servicio", vehicle.service_notes || "Sin notas")}
+        ${profileLine("Notas generales", vehicle.notes || "Sin notas")}
+      </article>
+    </div>
+  `;
+  $("#vehicle-profile-dialog").showModal();
+}
+
+function profileLine(label, value) {
+  return `<p class="profile-line"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></p>`;
+}
+
+function vehicleCalendarRows(vehicle) {
+  const rows = [
+    ["Seguro", vehicle.insurance_expires_at],
+    ["Tarjeta", vehicle.registration_expires_at],
+    ["Verificacion", vehicle.verification_expires_at],
+    ["Tenencia", vehicle.tax_expires_at],
+    ["GPS", vehicle.gps_expires_at],
+    ["Servicio", vehicle.next_service_date]
+  ];
+  const html = rows.map(([label, dateValue]) => {
+    const status = statusFromDate(dateValue);
+    return `
+      <div class="profile-calendar-row">
+        <span>${label}</span>
+        <strong>${dateValue || "Sin fecha"}</strong>
+        <em class="traffic ${status.key}">${status.label}</em>
+      </div>
+    `;
+  }).join("");
+  return html;
+}
+
+function profileMovementRow(record) {
+  return `
+    <div class="list-row">
+      <span>
+        <strong>${escapeHtml(record.concept || record.kind)}</strong>
+        <small>${escapeHtml(record.kind)} - ${escapeHtml(record.date || "Sin fecha")}</small>
+      </span>
+      <span class="traffic ${record.kind === "Ingreso" ? "green" : "red"}">${money(record.amount || 0)}</span>
+    </div>
+  `;
 }
 
 function inputForField([name, label, type, options], record = {}) {
