@@ -53,6 +53,7 @@ const fieldSets = {
     ["notes", "Notas generales", "textarea"]
   ],
   drivers: [
+    ["internal_code", "Codigo interno", "text"],
     ["full_name", "Nombre completo", "text"],
     ["phone", "Telefono", "tel"],
     ["address", "Direccion", "textarea"],
@@ -936,6 +937,7 @@ function bindDialog() {
       if (!key.startsWith("__file_")) record[key] = value;
     }
     record.id = activeRecordId || crypto.randomUUID();
+    applyRecordDefaults(activeRecordType, record);
     for (const field of fieldSets[activeRecordType]) {
       if (field[2] === "date" || field[2] === "datetime-local") {
         record[field[0]] = record[field[0]] || null;
@@ -978,6 +980,15 @@ function openRecord(type, id = null) {
   $("#delete-record").classList.toggle("is-hidden", !id);
   $("#dialog-fields").innerHTML = fieldSets[type].map((field) => inputForField(field, record)).join("");
   $("#record-dialog").showModal();
+}
+
+function applyRecordDefaults(type, record) {
+  if (type === "drivers" && !record.internal_code) {
+    record.internal_code = `CH-${String(record.id || crypto.randomUUID()).slice(0, 6).toUpperCase()}`;
+  }
+  if (type === "vehicles" && !record.internal_code) {
+    record.internal_code = `LB-${String(record.id || crypto.randomUUID()).slice(0, 6).toUpperCase()}`;
+  }
 }
 
 function bindVehicleProfileDialog() {
@@ -1310,7 +1321,7 @@ function barRow(label, value, max, className) {
 function metaFor(type, record) {
   const map = {
     vehicles: [`Placas: ${record.plates || "N/D"}`, `Modelo: ${record.model || "N/D"}`, `Chofer: ${record.driver_name || "Sin asignar"}`, `Prox. servicio: ${record.next_service_date || "Sin fecha"}`],
-    drivers: [`Telefono: ${record.phone || "N/D"}`, `Vehiculo: ${record.vehicle_assigned || "Sin asignar"}`, `Licencia: ${record.license_expiration || "Sin fecha"}`],
+    drivers: [`Codigo: ${record.internal_code || "N/D"}`, `Telefono: ${record.phone || "N/D"}`, `Vehiculo: ${record.vehicle_assigned || "Sin asignar"}`, `Licencia: ${record.license_expiration || "Sin fecha"}`],
     documents: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Vence: ${record.expires_at || "Sin fecha"}`],
     services: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Proximo: ${record.next_service_date || "Sin fecha"}`, `Costo: ${money(record.cost || 0)}`],
     gps: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Conexion: ${record.last_connection || "Sin dato"}`, `Vence: ${record.expires_at || "Sin fecha"}`]
@@ -1320,7 +1331,7 @@ function metaFor(type, record) {
 
 function getTitle(type, record) {
   if (type === "vehicles") return `${record.internal_code || "Unidad"} - ${record.brand || ""} ${record.model || ""}`.trim();
-  if (type === "drivers") return record.full_name || "Chofer";
+  if (type === "drivers") return `${record.internal_code || "Chofer"} - ${record.full_name || ""}`.trim();
   if (type === "documents") return record.document_name || "Documento";
   if (type === "services") return record.service_type || "Servicio";
   if (type === "gps") return record.gps_name || "Unidad GPS";
