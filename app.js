@@ -8,12 +8,12 @@ const STORE_KEY = "labesa-movilidad-local";
 const today = new Date();
 
 const modules = [
-  { id: "dashboard", title: "Dashboard general", icon: "▦" },
-  { id: "vehicles", title: "Vehiculos", icon: "▣" },
-  { id: "drivers", title: "Choferes", icon: "◉" },
-  { id: "documents", title: "Documentos", icon: "◆" },
-  { id: "services", title: "Servicios", icon: "◍" },
-  { id: "gps", title: "GPS", icon: "⌖" },
+  { id: "dashboard", title: "Dashboard general", icon: "D" },
+  { id: "vehicles", title: "Vehiculos", icon: "V" },
+  { id: "drivers", title: "Choferes", icon: "C" },
+  { id: "documents", title: "Documentos", icon: "A" },
+  { id: "services", title: "Servicios", icon: "S" },
+  { id: "gps", title: "GPS", icon: "G" },
   { id: "finance", title: "Finanzas", icon: "$" }
 ];
 
@@ -179,6 +179,12 @@ const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
 document.addEventListener("DOMContentLoaded", init);
 
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+
 function init() {
   renderNavigation();
   bindAuth();
@@ -272,12 +278,34 @@ function renderDashboard() {
   const maxMoney = Math.max(income, expenses, 1);
 
   $("#dashboard-view").innerHTML = `
-    <div class="stats-grid">
-      ${statCard("Unidades activas", activeVehicles, "Vehiculos operando")}
-      ${statCard("Vehiculos", state.vehicles.length, "Registros totales")}
-      ${statCard("Documentos por vencer", alertItems.length, "Amarillo y rojo")}
-      ${statCard("Balance", money(balance), "Ingresos menos egresos")}
+    <section class="hero-card">
+      <img class="hero-logo" src="assets/logo-labesa-oficial.jpeg" alt="LaBesa Movilidad" />
+      <div class="hero-copy">
+        <h3>LaBesa Control de Flotilla</h3>
+        <p>Acercamos personas y negocios.</p>
+        <span class="status-pill">Excelente</span>
+      </div>
+      <button class="primary-btn hero-action" data-view="vehicles" type="button">Ver flotilla</button>
+      <div class="hero-lines">
+        <strong>Inicia sesion para guardar en la nube</strong>
+        <span>Version operativa v8 - Finanzas editables</span>
+      </div>
+    </section>
+
+    <div class="section-title-row">
+      <h3>Resumen operativo</h3>
     </div>
+
+    <div class="stats-grid operational-grid">
+      ${statCard("Vehiculos", state.vehicles.length, `${activeVehicles} activos`)}
+      ${statCard("Conductores", state.drivers.length, "capturados")}
+      ${statCard("Archivos", state.documents.length, "guardados")}
+      ${statCard("Ingresos", money(income), "mes actual")}
+      ${statCard("Gastos", money(expenses), "mes actual")}
+      ${statCard("Utilidad", money(balance), "automatico")}
+    </div>
+    <button class="primary-btn wide-action" data-view="finance" type="button">Registrar ingreso o gasto</button>
+
     <div class="dashboard-layout">
       <section class="module-panel">
         <div class="panel-header">
@@ -298,9 +326,10 @@ function renderDashboard() {
       <section class="module-panel">
         <div class="panel-header">
           <div>
-            <h3>Semaforo de alertas</h3>
+            <h3>Alertas prioritarias</h3>
             <p>Verde vigente, amarillo proximo, rojo vencido</p>
           </div>
+          <button class="text-link" data-view="documents" type="button">Ver calendario</button>
         </div>
         <div class="alerts-list">
           ${alertItems.length ? alertItems.slice(0, 8).map(alertRow).join("") : `<div class="empty-state">No hay vencimientos criticos.</div>`}

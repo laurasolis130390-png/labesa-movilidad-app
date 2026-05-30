@@ -1,0 +1,25 @@
+{
+  "name": "LaBesa Movilidad",
+  "short_name": "LaBesa",
+  "description": "Control integral de flotilla vehicular LaBesa Movilidad.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#001f43",
+  "theme_color": "#001f43",
+  "icons": [
+    {
+      "src": "/assets/logo-labesa-oficial.jpeg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/logo-labesa-oficial.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}
