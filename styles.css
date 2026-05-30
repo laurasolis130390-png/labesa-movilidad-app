@@ -902,6 +902,87 @@ textarea:focus {
   text-decoration: none;
 }
 
+.finance-summary-grid {
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+}
+
+.loan-row {
+  border-color: rgba(37, 215, 199, 0.22);
+}
+
+.loan-row > span:last-child {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.loan-row b {
+  color: inherit;
+  font-size: 1rem;
+}
+
+.loan-row em {
+  font-style: normal;
+}
+
+.vehicle-finance-list {
+  display: grid;
+  gap: 12px;
+}
+
+.vehicle-finance-row {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid rgba(37, 215, 199, 0.16);
+  border-radius: 16px;
+  background: rgba(37, 215, 199, 0.07);
+}
+
+.vehicle-finance-row header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.vehicle-finance-row header strong {
+  color: inherit;
+  font-size: 1.05rem;
+}
+
+.vehicle-finance-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.vehicle-finance-grid span {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.light-theme .vehicle-finance-grid span {
+  background: #f3f8fb;
+}
+
+.vehicle-finance-grid small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.vehicle-finance-grid b {
+  color: inherit;
+}
+
+.profit-row.compact {
+  grid-template-columns: 70px 1fr 86px;
+  margin: 0;
+}
+
 .orbit {
   position: absolute;
   border: 5px solid rgba(37, 215, 199, 0.72);
@@ -1133,6 +1214,10 @@ textarea:focus {
     gap: 10px;
   }
 
+  .finance-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .stat-card {
     min-height: 114px;
     padding: 16px;
@@ -1156,6 +1241,15 @@ textarea:focus {
   .profit-row {
     grid-template-columns: 78px 1fr 96px;
     gap: 10px;
+  }
+
+  .vehicle-finance-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .vehicle-finance-row header {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .screen-heading h3 {

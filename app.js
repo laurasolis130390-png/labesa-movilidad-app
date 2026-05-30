@@ -24,7 +24,8 @@ const tableMap = {
   services: "services",
   gps: "gps_units",
   income: "income",
-  expenses: "expenses"
+  expenses: "expenses",
+  loans: "loans"
 };
 
 const fieldSets = {
@@ -116,6 +117,16 @@ const fieldSets = {
     ["amount", "Monto", "number"],
     ["category", "Categoria", "select", ["gasolina", "mantenimiento", "GPS", "seguro", "refaccion", "multa", "otro"]],
     ["notes", "Notas", "textarea"]
+  ],
+  loans: [
+    ["borrower_name", "Persona / cliente", "text"],
+    ["vehicle_code", "Vehiculo relacionado", "vehicle-select"],
+    ["loan_date", "Fecha del prestamo", "date"],
+    ["amount", "Monto prestado", "number"],
+    ["recovered_amount", "Monto recuperado", "number"],
+    ["due_date", "Fecha compromiso de pago", "date"],
+    ["status", "Estatus", "select", ["pendiente", "parcial", "pagado", "vencido"]],
+    ["notes", "Notas", "textarea"]
   ]
 };
 
@@ -169,7 +180,8 @@ const seed = {
       amount: 900,
       category: "gasolina"
     }
-  ]
+  ],
+  loans: []
 };
 
 let state = loadLocal();
@@ -679,6 +691,7 @@ function getVehicleProfitability() {
     const code = vehicleKey(vehicle);
     const vehicleIncome = sum(state.income.filter((item) => item.vehicle_code === code));
     const vehicleExpenses = sum(state.expenses.filter((item) => item.vehicle_code === code));
+    const vehicleLoans = loanSummary(state.loans.filter((item) => item.vehicle_code === code));
     const balance = vehicleIncome - vehicleExpenses;
     const percent = vehicleIncome > 0 ? Math.max(0, Math.round((balance / vehicleIncome) * 100)) : 0;
     return {
@@ -686,6 +699,8 @@ function getVehicleProfitability() {
       income: vehicleIncome,
       expenses: vehicleExpenses,
       balance,
+      loansOutstanding: vehicleLoans.outstanding,
+      cash: balance - vehicleLoans.outstanding,
       percent
     };
   });
@@ -701,27 +716,109 @@ function profitRow(code, percent, balance = 0) {
   `;
 }
 
+function loanSummary(records = state.loans) {
+  const lent = sum(records);
+  const recovered = records.reduce((total, item) => total + Number(item.recovered_amount || 0), 0);
+  const outstanding = Math.max(0, lent - recovered);
+  const activeCount = records.filter((item) => {
+    const status = item.status || loanStatus(item).label.toLowerCase();
+    return !["pagado"].includes(status);
+  }).length;
+  return { lent, recovered, outstanding, activeCount };
+}
+
+function loanStatus(record) {
+  const outstanding = Number(record.amount || 0) - Number(record.recovered_amount || 0);
+  if (outstanding <= 0 || record.status === "pagado") return { key: "green", label: "Pagado" };
+  const due = statusFromDate(record.due_date);
+  if (due.key === "red") return { key: "red", label: "Vencido" };
+  if (due.key === "yellow") return { key: "yellow", label: "Por vencer" };
+  return { key: "gray", label: record.status === "parcial" ? "Parcial" : "Pendiente" };
+}
+
+function loanRow(record) {
+  const outstanding = Math.max(0, Number(record.amount || 0) - Number(record.recovered_amount || 0));
+  const status = loanStatus(record);
+  return `
+    <button class="list-row loan-row" data-edit-type="loans" data-id="${record.id}" type="button">
+      <span>
+        <strong>${record.borrower_name || "Prestamo"}</strong>
+        <small>${record.vehicle_code || "Sin vehiculo"} · Prestado ${money(record.amount || 0)} · Recuperado ${money(record.recovered_amount || 0)}</small>
+      </span>
+      <span>
+        <b>${money(outstanding)}</b>
+        <em class="traffic ${status.key}">${status.label}</em>
+      </span>
+    </button>
+  `;
+}
+
+function vehicleFinanceRow(row) {
+  return `
+    <article class="vehicle-finance-row">
+      <header>
+        <strong>${row.label}</strong>
+        <span class="traffic ${row.balance >= 0 ? "green" : "red"}">${money(row.cash)} caja neta</span>
+      </header>
+      <div class="vehicle-finance-grid">
+        <span><small>Ingresos</small><b>${money(row.income)}</b></span>
+        <span><small>Gastos</small><b>${money(row.expenses)}</b></span>
+        <span><small>Utilidad</small><b>${money(row.balance)}</b></span>
+        <span><small>Prestamos</small><b>${money(row.loansOutstanding)}</b></span>
+      </div>
+      <div class="profit-row compact">
+        <strong>${row.percent}%</strong>
+        <span><i style="width:${row.percent}%"></i></span>
+        <em>rentabilidad</em>
+      </div>
+    </article>
+  `;
+}
+
 function renderFinance() {
   const income = sum(state.income);
   const expenses = sum(state.expenses);
   const balance = income - expenses;
   const vehicleRows = getVehicleProfitability();
+  const loans = loanSummary();
+  const cashEstimate = balance - loans.outstanding;
   $("#finance-view").innerHTML = `
-    <div class="stats-grid">
-      ${statCard("Ingresos", money(income), "Total registrado")}
-      ${statCard("Egresos", money(expenses), "Total registrado")}
-      ${statCard("Utilidad / perdida", money(balance), "Balance = ingresos - egresos")}
-      ${statCard("Movimientos", state.income.length + state.expenses.length, "Ingresos y egresos")}
+    <div class="stats-grid finance-summary-grid">
+      ${statCard("Ingresos operativos", money(income), "Rentas y pagos")}
+      ${statCard("Egresos operativos", money(expenses), "Gastos reales")}
+      ${statCard("Utilidad operativa", money(balance), "Ingresos - egresos")}
+      ${statCard("Prestado", money(loans.lent), "Dinero entregado")}
+      ${statCard("Recuperado", money(loans.recovered), "Dinero devuelto")}
+      ${statCard("Por cobrar", money(loans.outstanding), "Saldo pendiente")}
+      ${statCard("Caja estimada", money(cashEstimate), "Utilidad - por cobrar")}
+      ${statCard("Prestamos activos", loans.activeCount, "Pendientes/parciales")}
     </div>
+
+    <section class="module-panel loan-summary-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Prestamos por cobrar</h3>
+          <p>Separados de la utilidad operativa, pero visibles en caja estimada.</p>
+        </div>
+        <button class="primary-btn" data-create="loans" type="button">Agregar prestamo</button>
+      </div>
+      <div class="finance-list" data-grid="loans">
+        ${state.loans.map((record) => loanRow(record)).join("") || `<div class="empty-state">Sin prestamos registrados.</div>`}
+      </div>
+    </section>
+
     <section class="module-panel profitability-card">
       <div class="panel-header">
         <div>
-          <h3>Rentabilidad real por coche</h3>
-          <p>Calculado con ingresos y egresos registrados por vehiculo</p>
+          <h3>Balance por coche</h3>
+          <p>Ingresos, gastos, prestamos relacionados y caja neta.</p>
         </div>
       </div>
-      ${vehicleRows.length ? vehicleRows.map((row) => profitRow(row.label, row.percent, row.balance)).join("") : `<div class="empty-state">Captura vehiculos e ingresos/egresos para calcular rentabilidad.</div>`}
+      <div class="vehicle-finance-list">
+        ${vehicleRows.length ? vehicleRows.map(vehicleFinanceRow).join("") : `<div class="empty-state">Captura vehiculos e ingresos/egresos para calcular rentabilidad.</div>`}
+      </div>
     </section>
+
     <div class="dashboard-layout">
       ${financePanel("income", "Ingresos", "Crear ingresos por vehiculo, chofer y periodo.")}
       ${financePanel("expenses", "Egresos", "Registrar gastos por categoria y comprobante.")}
@@ -729,6 +826,7 @@ function renderFinance() {
   `;
   bindModule("income");
   bindModule("expenses");
+  bindModule("loans");
 }
 
 function financePanel(type, title, subtitle) {
@@ -978,6 +1076,7 @@ function statusForRecord(type, record) {
   if (type === "services") return statusFromDate(record.next_service_date);
   if (type === "gps") return statusFromDate(record.expires_at);
   if (type === "drivers") return statusFromDate(record.license_expiration);
+  if (type === "loans") return loanStatus(record);
   return record.status === "activo" || record.status === "disponible" ? { key: "green", label: "Vigente" } : { key: "gray", label: "Sin fecha" };
 }
 
@@ -1100,6 +1199,7 @@ function getTitle(type, record) {
   if (type === "documents") return record.document_name || "Documento";
   if (type === "services") return record.service_type || "Servicio";
   if (type === "gps") return record.gps_name || "Unidad GPS";
+  if (type === "loans") return record.borrower_name || "Prestamo";
   return record.concept || "Registro";
 }
 
@@ -1111,7 +1211,8 @@ function labelForType(type) {
     services: "servicio",
     gps: "GPS",
     income: "ingreso",
-    expenses: "egreso"
+    expenses: "egreso",
+    loans: "prestamo"
   }[type];
 }
 
