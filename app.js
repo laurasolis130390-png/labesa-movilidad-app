@@ -301,7 +301,6 @@ function renderDashboard() {
       </div>
       <button class="primary-btn hero-action" data-view="vehicles" type="button">Ver flotilla</button>
       <div class="hero-lines">
-        <strong>Inicia sesion para guardar en la nube</strong>
         <span>Version operativa v8 - Finanzas editables</span>
       </div>
     </section>
