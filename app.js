@@ -211,6 +211,12 @@ function bindAuth() {
     await syncFromSupabase();
     renderAll();
   });
+  $("#logout-btn").addEventListener("click", async () => {
+    if (hasSupabase) await supabaseClient.auth.signOut();
+    $("#app-shell").classList.add("is-hidden");
+    $("#login-screen").classList.remove("is-hidden");
+    $("#login-password").value = "";
+  });
 }
 
 function showApp() {

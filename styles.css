@@ -279,6 +279,11 @@ textarea:focus {
   gap: 12px;
 }
 
+.topbar-actions .ghost-btn {
+  min-height: 38px;
+  padding: 0 14px;
+}
+
 .topbar-logo {
   width: 58px;
   aspect-ratio: 1;
