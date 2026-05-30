@@ -1147,6 +1147,11 @@ function inputForField([name, label, type, options], record = {}) {
       </label>
     `;
   }
+  if (type === "number") {
+    const decimalFields = ["amount", "cost", "recovered_amount"];
+    const step = decimalFields.includes(name) ? "0.01" : "1";
+    return `<label>${label}<input name="${name}" type="number" step="${step}" inputmode="decimal" value="${escapeAttr(value)}" /></label>`;
+  }
   return `<label>${label}<input name="${name}" type="${type}" value="${escapeAttr(value)}" /></label>`;
 }
 
