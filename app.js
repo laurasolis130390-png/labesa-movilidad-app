@@ -6,14 +6,13 @@ const supabaseClient = hasSupabase
 
 const STORE_KEY = "labesa-movilidad-local";
 const THEME_KEY = "labesa-movilidad-theme";
+const WIALON_STORE_KEY = "labesa-wialon-config";
 const today = new Date();
 
 const modules = [
   { id: "dashboard", title: "Dashboard general", icon: "D" },
   { id: "vehicles", title: "Vehiculos", icon: "V" },
   { id: "drivers", title: "Choferes", icon: "C" },
-  { id: "documents", title: "Documentos", icon: "A" },
-  { id: "services", title: "Servicios", icon: "S" },
   { id: "gps", title: "GPS", icon: "G" },
   { id: "finance", title: "Finanzas", icon: "$" }
 ];
@@ -43,6 +42,13 @@ const fieldSets = {
     ["status", "Estatus", "select", ["activo", "inactivo", "taller", "disponible", "rentado"]],
     ["photo_url", "Foto del coche (URL publica)", "url"],
     ["__file_photo_url", "Subir foto del coche", "file", "vehicle-photos", "photo_url"],
+    ["insurance_expires_at", "Vencimiento de seguro", "date"],
+    ["registration_expires_at", "Vencimiento tarjeta de circulacion", "date"],
+    ["verification_expires_at", "Vencimiento verificacion", "date"],
+    ["tax_expires_at", "Vencimiento tenencia", "date"],
+    ["gps_expires_at", "Vencimiento GPS", "date"],
+    ["next_service_date", "Proximo servicio", "date"],
+    ["service_notes", "Notas de servicios / calendario", "textarea"],
     ["notes", "Notas generales", "textarea"]
   ],
   drivers: [
@@ -52,14 +58,14 @@ const fieldSets = {
     ["ine", "INE", "text"],
     ["license", "Licencia", "text"],
     ["license_expiration", "Vencimiento de licencia", "date"],
-    ["vehicle_assigned", "Vehiculo asignado", "text"],
+    ["vehicle_assigned", "Vehiculo asignado", "vehicle-select"],
     ["photo_url", "Foto del chofer (URL publica)", "url"],
     ["__file_photo_url", "Subir foto del chofer", "file", "driver-photos", "photo_url"],
     ["status", "Estatus", "select", ["activo", "inactivo", "suspendido"]],
     ["notes", "Notas", "textarea"]
   ],
   documents: [
-    ["vehicle_code", "Vehiculo", "text"],
+    ["vehicle_code", "Vehiculo", "vehicle-select"],
     ["document_name", "Documento", "select", ["Tarjeta de circulacion", "Poliza de seguro", "Verificacion", "Tenencia", "Licencia del chofer", "Factura", "Otro"]],
     ["file_url", "Archivo / foto / PDF (URL publica)", "url"],
     ["__file_file_url", "Subir archivo", "file", "vehicle-documents", "file_url"],
@@ -68,7 +74,7 @@ const fieldSets = {
     ["notes", "Notas", "textarea"]
   ],
   services: [
-    ["vehicle_code", "Vehiculo", "text"],
+    ["vehicle_code", "Vehiculo", "vehicle-select"],
     ["service_type", "Tipo de servicio", "text"],
     ["service_date", "Fecha del servicio", "date"],
     ["next_service_date", "Proxima fecha de servicio", "date"],
@@ -82,7 +88,7 @@ const fieldSets = {
     ["notes", "Anotaciones", "textarea"]
   ],
   gps: [
-    ["vehicle_code", "Vehiculo", "text"],
+    ["vehicle_code", "Vehiculo", "vehicle-select"],
     ["wialon_unit_id", "ID de unidad en Wialon", "text"],
     ["gps_name", "Nombre de unidad GPS", "text"],
     ["gps_status", "Estatus GPS", "select", ["activo", "sin conexion", "suspendido"]],
@@ -94,25 +100,21 @@ const fieldSets = {
     ["notes", "Notas", "textarea"]
   ],
   income: [
-    ["vehicle_code", "Vehiculo", "text"],
+    ["vehicle_code", "Vehiculo", "vehicle-select"],
     ["driver_name", "Chofer", "text"],
     ["concept", "Concepto", "text"],
     ["date", "Fecha", "date"],
     ["amount", "Monto", "number"],
     ["payment_method", "Metodo de pago", "text"],
     ["period", "Semana o periodo", "text"],
-    ["receipt_url", "Comprobante (URL publica)", "url"],
-    ["__file_receipt_url", "Subir comprobante", "file", "finance-receipts", "receipt_url"],
     ["notes", "Notas", "textarea"]
   ],
   expenses: [
-    ["vehicle_code", "Vehiculo", "text"],
+    ["vehicle_code", "Vehiculo", "vehicle-select"],
     ["concept", "Concepto", "text"],
     ["date", "Fecha", "date"],
     ["amount", "Monto", "number"],
     ["category", "Categoria", "select", ["gasolina", "mantenimiento", "GPS", "seguro", "refaccion", "multa", "otro"]],
-    ["receipt_url", "Comprobante (URL publica)", "url"],
-    ["__file_receipt_url", "Subir comprobante", "file", "finance-receipts", "receipt_url"],
     ["notes", "Notas", "textarea"]
   ]
 };
@@ -174,6 +176,8 @@ let state = loadLocal();
 let activeView = "dashboard";
 let activeRecordType = null;
 let activeRecordId = null;
+let wialonSession = null;
+let wialonUnits = [];
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
@@ -252,8 +256,8 @@ function renderNavigation() {
     modules.find((item) => item.id === "vehicles"),
     modules.find((item) => item.id === "gps"),
     modules.find((item) => item.id === "finance"),
-    { id: "documents", title: "Mas", icon: "M" }
-  ];
+    modules.find((item) => item.id === "drivers")
+  ].filter(Boolean);
   $("#main-menu").innerHTML = markup;
   $("#bottom-nav").innerHTML = mobileItems.map((item) => navButton(item)).join("");
   $$(".nav-btn").forEach((button) => {
@@ -292,11 +296,12 @@ function renderAll() {
 function renderDashboard() {
   const activeVehicles = state.vehicles.filter((v) => v.status === "activo").length;
   const alertItems = collectAlerts();
-  const pendingServices = state.services.filter((s) => statusFromDate(s.next_service_date).key !== "green").length;
+  const pendingServices = state.vehicles.filter((v) => statusFromDate(v.next_service_date).key !== "green").length;
   const income = sum(state.income);
   const expenses = sum(state.expenses);
   const balance = income - expenses;
   const maxMoney = Math.max(income, expenses, 1);
+  const vehicleProfitRows = getVehicleProfitability();
 
   $("#dashboard-view").innerHTML = `
     <section class="hero-card">
@@ -319,7 +324,7 @@ function renderDashboard() {
     <div class="stats-grid operational-grid">
       ${statCard("Vehiculos", state.vehicles.length, `${activeVehicles} activos`)}
       ${statCard("Conductores", state.drivers.length, "capturados")}
-      ${statCard("Archivos", state.documents.length, "guardados")}
+      ${statCard("Calendario", alertItems.length, "alertas")}
       ${statCard("Ingresos", money(income), "mes actual")}
       ${statCard("Gastos", money(expenses), "mes actual")}
       ${statCard("Utilidad", money(balance), "automatico")}
@@ -335,21 +340,13 @@ function renderDashboard() {
         <strong>${money(balance)} utilidad</strong>
       </div>
       <div class="mini-bars" aria-label="Grafica visual de ingresos y gastos">
-        <span class="income" style="height: 56%"></span>
-        <span class="expense" style="height: 34%"></span>
-        <span class="income" style="height: 64%"></span>
-        <span class="expense" style="height: 38%"></span>
-        <span class="income" style="height: 78%"></span>
-        <span class="expense" style="height: 32%"></span>
+        ${financeBars(income, expenses)}
       </div>
     </section>
 
     <section class="module-panel profitability-card">
       <h3>Rentabilidad por vehiculo</h3>
-      ${profitRow("LB-018", 92)}
-      ${profitRow("LB-031", 81)}
-      ${profitRow("LB-007", 74)}
-      ${profitRow("LB-024", 43)}
+      ${vehicleProfitRows.length ? vehicleProfitRows.map((row) => profitRow(row.label, row.percent, row.balance)).join("") : `<div class="empty-state">Sin datos financieros por vehiculo.</div>`}
     </section>
 
     <div class="dashboard-layout">
@@ -375,7 +372,7 @@ function renderDashboard() {
             <h3>Alertas prioritarias</h3>
             <p>Verde vigente, amarillo proximo, rojo vencido</p>
           </div>
-          <button class="text-link" data-view="documents" type="button">Ver calendario</button>
+          <button class="text-link" data-view="vehicles" type="button">Ver calendario</button>
         </div>
         <div class="alerts-list">
           ${alertItems.length ? alertItems.slice(0, 8).map(alertRow).join("") : `<div class="empty-state">No hay vencimientos criticos.</div>`}
@@ -393,7 +390,11 @@ function renderDashboard() {
             title: service.service_type || "Servicio",
             detail: service.vehicle_code || "Sin vehiculo",
             status: statusFromDate(service.next_service_date)
-          })).join("") || `<div class="empty-state">Aun no hay servicios registrados.</div>`}
+          })).join("") || state.vehicles.filter((vehicle) => vehicle.next_service_date).slice(0, 6).map((vehicle) => alertRow({
+            title: `Servicio ${vehicle.internal_code || vehicle.plates || "Unidad"}`,
+            detail: vehicle.model || vehicle.brand || "Vehiculo",
+            status: statusFromDate(vehicle.next_service_date)
+          })).join("") || `<div class="empty-state">Aun no hay servicios programados.</div>`}
         </div>
       </section>
       <section class="module-panel">
@@ -451,6 +452,7 @@ function renderModule(type, title, subtitle) {
 
 function renderGpsModule(title, subtitle) {
   const records = state.gps || [];
+  const savedWialon = loadWialonConfig();
   const view = $("#gps-view");
   view.innerHTML = `
     <div class="screen-heading">
@@ -461,24 +463,25 @@ function renderGpsModule(title, subtitle) {
       <div class="panel-header">
         <div>
           <h3>Conexion Wialon</h3>
-          <p>${CONFIG.WIALON_TOKEN ? "Wialon configurado" : "Wialon sin conectar"}</p>
+          <p id="wialon-status">${wialonSession ? "Wialon conectado" : "Wialon sin conectar"}</p>
         </div>
       </div>
       <div class="wialon-box">
         <label>
           Servidor Wialon
-          <select>
-            <option>https://hst-api.wialon.com</option>
+          <select id="wialon-server">
+            <option value="https://hst-api.wialon.com" ${savedWialon.server === "https://hst-api.wialon.com" ? "selected" : ""}>https://hst-api.wialon.com</option>
+            <option value="https://kit-api.wialon.com" ${savedWialon.server === "https://kit-api.wialon.com" ? "selected" : ""}>https://kit-api.wialon.com</option>
           </select>
         </label>
         <label>
           Token API Wialon
-          <input type="password" placeholder="Pega aqui tu token de Wialon" />
+          <input id="wialon-token" type="password" placeholder="Pega aqui tu token de Wialon" value="${escapeAttr(savedWialon.token)}" />
         </label>
         <div class="wialon-actions">
-          <button class="primary-btn" type="button">Conectar Wialon</button>
-          <button class="ghost-btn" type="button">Actualizar GPS</button>
-          <button class="danger-btn" type="button">Desconectar</button>
+          <button id="connect-wialon" class="primary-btn" type="button">Conectar Wialon</button>
+          <button id="refresh-wialon" class="ghost-btn" type="button">Actualizar GPS</button>
+          <button id="disconnect-wialon" class="danger-btn" type="button">Desconectar</button>
         </div>
       </div>
     </section>
@@ -488,6 +491,17 @@ function renderGpsModule(title, subtitle) {
       <i class="pin pin-a"></i>
       <i class="pin pin-b"></i>
       <i class="pin pin-c"></i>
+    </section>
+    <section class="module-panel live-gps-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Unidades en Wialon</h3>
+          <p id="wialon-count">${wialonUnits.length ? `${wialonUnits.length} unidad(es) encontradas` : "Conecta Wialon para cargar unidades"}</p>
+        </div>
+      </div>
+      <div id="wialon-units" class="wialon-units">
+        ${renderWialonUnits()}
+      </div>
     </section>
     <section class="module-panel">
       <div class="panel-header">
@@ -503,14 +517,186 @@ function renderGpsModule(title, subtitle) {
     </section>
   `;
   bindModule("gps");
+  bindWialonControls();
 }
 
-function profitRow(code, percent) {
+function bindWialonControls() {
+  $("#connect-wialon")?.addEventListener("click", connectWialon);
+  $("#refresh-wialon")?.addEventListener("click", refreshWialonUnits);
+  $("#disconnect-wialon")?.addEventListener("click", disconnectWialon);
+}
+
+function loadWialonConfig() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(WIALON_STORE_KEY)) || {};
+    return {
+      server: saved.server || CONFIG.WIALON_API_URL || "https://hst-api.wialon.com",
+      token: saved.token || CONFIG.WIALON_TOKEN || ""
+    };
+  } catch {
+    return { server: CONFIG.WIALON_API_URL || "https://hst-api.wialon.com", token: CONFIG.WIALON_TOKEN || "" };
+  }
+}
+
+function saveWialonConfig(server, token) {
+  localStorage.setItem(WIALON_STORE_KEY, JSON.stringify({ server, token }));
+}
+
+async function connectWialon() {
+  const server = $("#wialon-server").value;
+  const token = $("#wialon-token").value.trim();
+  if (!token) {
+    alert("Pega primero tu token API de Wialon.");
+    return;
+  }
+  saveWialonConfig(server, token);
+  setWialonStatus("Conectando con Wialon...");
+  try {
+    const login = await wialonRequest(server, "token/login", { token });
+    if (login.error) throw new Error(wialonErrorMessage(login.error));
+    wialonSession = { server, sid: login.eid, user: login.au || login.user || null };
+    setWialonStatus("Wialon conectado. Cargando unidades...");
+    await refreshWialonUnits();
+  } catch (error) {
+    wialonSession = null;
+    setWialonStatus("Wialon sin conectar");
+    alert(`No se pudo conectar Wialon: ${error.message}`);
+  }
+}
+
+async function refreshWialonUnits() {
+  if (!wialonSession) {
+    await connectWialon();
+    return;
+  }
+  try {
+    const data = await wialonRequest(wialonSession.server, "core/search_items", {
+      spec: {
+        itemsType: "avl_unit",
+        propName: "sys_name",
+        propValueMask: "*",
+        sortType: "sys_name"
+      },
+      force: 1,
+      flags: 1025,
+      from: 0,
+      to: 0
+    }, wialonSession.sid);
+    if (data.error) throw new Error(wialonErrorMessage(data.error));
+    wialonUnits = Array.isArray(data.items) ? data.items : [];
+    setWialonStatus("Wialon conectado");
+    renderWialonUnitList();
+  } catch (error) {
+    alert(`No se pudo actualizar GPS: ${error.message}`);
+  }
+}
+
+async function disconnectWialon() {
+  if (wialonSession) {
+    await wialonRequest(wialonSession.server, "core/logout", {}, wialonSession.sid).catch(() => {});
+  }
+  wialonSession = null;
+  wialonUnits = [];
+  localStorage.removeItem(WIALON_STORE_KEY);
+  $("#wialon-token").value = "";
+  setWialonStatus("Wialon sin conectar");
+  renderWialonUnitList();
+}
+
+async function wialonRequest(server, service, params, sid = "") {
+  const url = new URL("/wialon/ajax.html", server);
+  url.searchParams.set("svc", service);
+  url.searchParams.set("params", JSON.stringify(params));
+  if (sid) url.searchParams.set("sid", sid);
+  const response = await fetch(url.toString());
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
+function setWialonStatus(message) {
+  const status = $("#wialon-status");
+  if (status) status.textContent = message;
+}
+
+function renderWialonUnitList() {
+  const list = $("#wialon-units");
+  const count = $("#wialon-count");
+  if (count) count.textContent = wialonUnits.length ? `${wialonUnits.length} unidad(es) encontradas` : "Sin unidades cargadas";
+  if (list) list.innerHTML = renderWialonUnits();
+}
+
+function renderWialonUnits() {
+  if (!wialonUnits.length) {
+    return `<div class="empty-state">Aun no hay unidades GPS cargadas desde Wialon.</div>`;
+  }
+  return wialonUnits.map((unit) => {
+    const pos = unit.pos || {};
+    const hasPosition = Number.isFinite(pos.x) && Number.isFinite(pos.y);
+    const mapsUrl = hasPosition ? `https://www.google.com/maps?q=${pos.y},${pos.x}` : "";
+    return `
+      <article class="wialon-unit">
+        <div>
+          <strong>${escapeHtml(unit.nm || "Unidad GPS")}</strong>
+          <span>${hasPosition ? `${pos.y.toFixed(5)}, ${pos.x.toFixed(5)}` : "Sin ubicacion reciente"}</span>
+          <small>${pos.t ? `Ultima conexion: ${formatUnix(pos.t)}` : "Sin fecha de conexion"}</small>
+        </div>
+        ${mapsUrl ? `<a class="small-btn" href="${mapsUrl}" target="_blank" rel="noreferrer">Mapa</a>` : `<span class="badge">Sin GPS</span>`}
+      </article>
+    `;
+  }).join("");
+}
+
+function formatUnix(value) {
+  return new Date(value * 1000).toLocaleString("es-MX", {
+    dateStyle: "short",
+    timeStyle: "short"
+  });
+}
+
+function wialonErrorMessage(code) {
+  const messages = {
+    1: "token invalido o sesion no autorizada",
+    4: "parametros incorrectos",
+    7: "permiso denegado",
+    8: "token vencido o acceso no permitido",
+    1001: "no hay conexion con el servidor Wialon"
+  };
+  return messages[code] || `codigo de error ${code}`;
+}
+
+function financeBars(income, expenses) {
+  const max = Math.max(income, expenses, 1);
+  const incomeHeight = Math.max(8, Math.round((income / max) * 90));
+  const expenseHeight = Math.max(8, Math.round((expenses / max) * 90));
+  return `
+    <span class="income" style="height:${incomeHeight}%"></span>
+    <span class="expense" style="height:${expenseHeight}%"></span>
+  `;
+}
+
+function getVehicleProfitability() {
+  return state.vehicles.map((vehicle) => {
+    const code = vehicleKey(vehicle);
+    const vehicleIncome = sum(state.income.filter((item) => item.vehicle_code === code));
+    const vehicleExpenses = sum(state.expenses.filter((item) => item.vehicle_code === code));
+    const balance = vehicleIncome - vehicleExpenses;
+    const percent = vehicleIncome > 0 ? Math.max(0, Math.round((balance / vehicleIncome) * 100)) : 0;
+    return {
+      label: code || vehicle.model || "Vehiculo",
+      income: vehicleIncome,
+      expenses: vehicleExpenses,
+      balance,
+      percent
+    };
+  });
+}
+
+function profitRow(code, percent, balance = 0) {
   return `
     <div class="profit-row">
       <strong>${code}</strong>
       <span><i style="width:${percent}%"></i></span>
-      <em>${percent}%</em>
+      <em>${percent}% · ${money(balance)}</em>
     </div>
   `;
 }
@@ -519,6 +705,7 @@ function renderFinance() {
   const income = sum(state.income);
   const expenses = sum(state.expenses);
   const balance = income - expenses;
+  const vehicleRows = getVehicleProfitability();
   $("#finance-view").innerHTML = `
     <div class="stats-grid">
       ${statCard("Ingresos", money(income), "Total registrado")}
@@ -526,6 +713,15 @@ function renderFinance() {
       ${statCard("Utilidad / perdida", money(balance), "Balance = ingresos - egresos")}
       ${statCard("Movimientos", state.income.length + state.expenses.length, "Ingresos y egresos")}
     </div>
+    <section class="module-panel profitability-card">
+      <div class="panel-header">
+        <div>
+          <h3>Rentabilidad real por coche</h3>
+          <p>Calculado con ingresos y egresos registrados por vehiculo</p>
+        </div>
+      </div>
+      ${vehicleRows.length ? vehicleRows.map((row) => profitRow(row.label, row.percent, row.balance)).join("") : `<div class="empty-state">Captura vehiculos e ingresos/egresos para calcular rentabilidad.</div>`}
+    </section>
     <div class="dashboard-layout">
       ${financePanel("income", "Ingresos", "Crear ingresos por vehiculo, chofer y periodo.")}
       ${financePanel("expenses", "Egresos", "Registrar gastos por categoria y comprobante.")}
@@ -634,7 +830,13 @@ function bindDialog() {
     }
     record.id = activeRecordId || crypto.randomUUID();
     for (const field of fieldSets[activeRecordType]) {
-      if (field[2] === "number") record[field[0]] = Number(record[field[0]] || 0);
+      if (field[2] === "date" || field[2] === "datetime-local") {
+        record[field[0]] = record[field[0]] || null;
+      }
+      if (field[2] === "number") {
+        const shouldDefaultZero = ["amount", "cost"].includes(field[0]);
+        record[field[0]] = record[field[0]] === "" ? (shouldDefaultZero ? 0 : null) : Number(record[field[0]]);
+      }
       if (field[2] === "file") {
         const file = formData.get(field[0]);
         if (file && file.name) {
@@ -677,6 +879,17 @@ function inputForField([name, label, type, options], record = {}) {
   if (type === "textarea") {
     return `<label class="${full}">${label}<textarea name="${name}">${escapeHtml(value)}</textarea></label>`;
   }
+  if (type === "vehicle-select") {
+    const vehicleOptions = state.vehicles.map((vehicle) => vehicleKey(vehicle)).filter(Boolean);
+    return `
+      <label>${label}
+        <select name="${name}">
+          <option value="">Seleccionar vehiculo</option>
+          ${vehicleOptions.map((option) => `<option value="${escapeAttr(option)}" ${value === option ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}
+        </select>
+      </label>
+    `;
+  }
   if (type === "file") {
     return `<label>${label}<input name="${name}" type="file" /></label>`;
   }
@@ -691,6 +904,10 @@ function inputForField([name, label, type, options], record = {}) {
     `;
   }
   return `<label>${label}<input name="${name}" type="${type}" value="${escapeAttr(value)}" /></label>`;
+}
+
+function vehicleKey(vehicle) {
+  return vehicle.internal_code || vehicle.plates || [vehicle.brand, vehicle.model].filter(Boolean).join(" ").trim();
 }
 
 async function syncFromSupabase() {
@@ -756,10 +973,30 @@ async function uploadRemoteFile(bucket, file) {
 }
 
 function statusForRecord(type, record) {
+  if (type === "vehicles") return vehicleCalendarStatus(record);
   if (type === "documents") return statusFromDate(record.expires_at);
   if (type === "services") return statusFromDate(record.next_service_date);
   if (type === "gps") return statusFromDate(record.expires_at);
   if (type === "drivers") return statusFromDate(record.license_expiration);
+  return record.status === "activo" || record.status === "disponible" ? { key: "green", label: "Vigente" } : { key: "gray", label: "Sin fecha" };
+}
+
+function vehicleCalendarStatus(vehicle) {
+  const statuses = [
+    vehicle.insurance_expires_at,
+    vehicle.registration_expires_at,
+    vehicle.verification_expires_at,
+    vehicle.tax_expires_at,
+    vehicle.gps_expires_at,
+    vehicle.next_service_date
+  ].filter(Boolean).map(statusFromDate);
+  if (statuses.some((status) => status.key === "red")) return { key: "red", label: "Vencido" };
+  if (statuses.some((status) => status.key === "yellow")) return { key: "yellow", label: "Proximo" };
+  if (statuses.some((status) => status.key === "green")) return { key: "green", label: "Vigente" };
+  return recordStatus(vehicle);
+}
+
+function recordStatus(record) {
   return record.status === "activo" || record.status === "disponible" ? { key: "green", label: "Vigente" } : { key: "gray", label: "Sin fecha" };
 }
 
@@ -774,6 +1011,23 @@ function statusFromDate(dateValue) {
 
 function collectAlerts() {
   const items = [];
+  state.vehicles.forEach((vehicle) => {
+    [
+      ["Seguro", vehicle.insurance_expires_at],
+      ["Tarjeta de circulacion", vehicle.registration_expires_at],
+      ["Verificacion", vehicle.verification_expires_at],
+      ["Tenencia", vehicle.tax_expires_at],
+      ["GPS", vehicle.gps_expires_at],
+      ["Servicio", vehicle.next_service_date]
+    ].forEach(([label, dateValue]) => {
+      if (!dateValue) return;
+      items.push({
+        title: `${label} · ${vehicleKey(vehicle) || "Vehiculo"}`,
+        detail: vehicle.model || vehicle.plates || "Calendario del vehiculo",
+        status: statusFromDate(dateValue)
+      });
+    });
+  });
   state.documents.forEach((record) => items.push({
     title: record.document_name || "Documento",
     detail: record.vehicle_code || "Sin vehiculo",
@@ -831,7 +1085,7 @@ function barRow(label, value, max, className) {
 
 function metaFor(type, record) {
   const map = {
-    vehicles: [`Placas: ${record.plates || "N/D"}`, `Modelo: ${record.model || "N/D"}`, `Chofer: ${record.driver_name || "Sin asignar"}`],
+    vehicles: [`Placas: ${record.plates || "N/D"}`, `Modelo: ${record.model || "N/D"}`, `Chofer: ${record.driver_name || "Sin asignar"}`, `Prox. servicio: ${record.next_service_date || "Sin fecha"}`],
     drivers: [`Telefono: ${record.phone || "N/D"}`, `Vehiculo: ${record.vehicle_assigned || "Sin asignar"}`, `Licencia: ${record.license_expiration || "Sin fecha"}`],
     documents: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Vence: ${record.expires_at || "Sin fecha"}`],
     services: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Proximo: ${record.next_service_date || "Sin fecha"}`, `Costo: ${money(record.cost || 0)}`],

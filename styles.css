@@ -762,7 +762,7 @@ textarea:focus {
 .mini-bars {
   height: 210px;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(2, minmax(70px, 1fr));
   align-items: end;
   gap: 16px;
   padding: 28px 16px 10px;
@@ -788,7 +788,7 @@ textarea:focus {
 
 .profit-row {
   display: grid;
-  grid-template-columns: 88px 1fr 48px;
+  grid-template-columns: 88px 1fr 110px;
   align-items: center;
   gap: 14px;
   margin: 12px 0;
@@ -856,6 +856,50 @@ textarea:focus {
     linear-gradient(rgba(37, 215, 199, 0.13) 1px, transparent 1px),
     linear-gradient(90deg, rgba(37, 215, 199, 0.13) 1px, transparent 1px);
   background-size: 52px 52px;
+}
+
+.wialon-units {
+  display: grid;
+  gap: 12px;
+}
+
+.wialon-unit {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(37, 215, 199, 0.16);
+  border-radius: 16px;
+  background: rgba(37, 215, 199, 0.07);
+}
+
+.wialon-unit strong,
+.wialon-unit span,
+.wialon-unit small {
+  display: block;
+}
+
+.wialon-unit strong {
+  color: inherit;
+  font-size: 1rem;
+}
+
+.wialon-unit span {
+  margin-top: 4px;
+  color: var(--brand-cyan);
+  font-weight: 800;
+}
+
+.wialon-unit small {
+  margin-top: 3px;
+  color: var(--muted);
+}
+
+.wialon-unit .small-btn {
+  display: inline-grid;
+  place-items: center;
+  text-decoration: none;
 }
 
 .orbit {
@@ -1110,7 +1154,7 @@ textarea:focus {
   }
 
   .profit-row {
-    grid-template-columns: 80px 1fr 42px;
+    grid-template-columns: 78px 1fr 96px;
     gap: 10px;
   }
 
