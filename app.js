@@ -313,6 +313,8 @@ function renderDashboard() {
   const income = sum(state.income);
   const expenses = sum(state.expenses);
   const balance = income - expenses;
+  const loans = loanSummary();
+  const cashAvailable = balance - loans.outstanding;
   const maxMoney = Math.max(income, expenses, 1);
   const vehicleProfitRows = getVehicleProfitability();
 
@@ -340,7 +342,9 @@ function renderDashboard() {
       ${statCard("Calendario", alertItems.length, "alertas")}
       ${statCard("Ingresos", money(income), "mes actual")}
       ${statCard("Gastos", money(expenses), "mes actual")}
-      ${statCard("Utilidad", money(balance), "automatico")}
+      ${statCard("Utilidad operativa", money(balance), "sin prestamos")}
+      ${statCard("Caja disponible", money(cashAvailable), "utilidad - por cobrar")}
+      ${statCard("Prestamos por cobrar", money(loans.outstanding), `${loans.activeCount} activos`)}
     </div>
     <button class="primary-btn wide-action" data-view="finance" type="button">Registrar ingreso o gasto</button>
 
@@ -349,9 +353,9 @@ function renderDashboard() {
         <div class="panel-header">
           <div>
             <h3>Ingresos vs gastos</h3>
-            <p>Mes actual</p>
+            <p>Mes actual, sin prestamos</p>
           </div>
-          <strong>${money(balance)} utilidad</strong>
+          <strong>${money(cashAvailable)} caja disponible</strong>
         </div>
         <div class="mini-bars" aria-label="Grafica visual de ingresos y gastos">
           ${financeBars(income, expenses)}
@@ -411,14 +415,16 @@ function renderDashboard() {
       <section class="module-panel">
         <div class="panel-header">
           <div>
-            <h3>Balance general</h3>
-            <p>${money(income)} ingresos / ${money(expenses)} egresos</p>
+            <h3>Balance y prestamos</h3>
+            <p>${money(balance)} utilidad operativa / ${money(loans.outstanding)} por cobrar</p>
           </div>
         </div>
         <div class="chart-bars">
           ${barRow("Ingresos", income, maxMoney, "income")}
           ${barRow("Egresos", expenses, maxMoney, "expense")}
-          ${barRow("Utilidad", Math.max(balance, 0), maxMoney, "")}
+          ${barRow("Utilidad operativa", Math.max(balance, 0), maxMoney, "")}
+          ${barRow("Por cobrar", loans.outstanding, Math.max(maxMoney, loans.outstanding, 1), "")}
+          ${barRow("Caja disponible", Math.max(cashAvailable, 0), Math.max(maxMoney, loans.outstanding, 1), "income")}
         </div>
       </section>
     </div>
