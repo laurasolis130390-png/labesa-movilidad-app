@@ -398,11 +398,7 @@ function renderDashboard() {
           </div>
         </div>
         <div class="alerts-list">
-          ${state.services.slice(0, 6).map((service) => alertRow({
-            title: service.service_type || "Servicio",
-            detail: service.vehicle_code || "Sin vehiculo",
-            status: statusFromDate(service.next_service_date)
-          })).join("") || state.vehicles.filter((vehicle) => vehicle.next_service_date).slice(0, 6).map((vehicle) => alertRow({
+          ${state.vehicles.filter((vehicle) => vehicle.next_service_date).slice(0, 6).map((vehicle) => alertRow({
             title: `Servicio ${vehicle.internal_code || vehicle.plates || "Unidad"}`,
             detail: vehicle.model || vehicle.brand || "Vehiculo",
             status: statusFromDate(vehicle.next_service_date)
@@ -1127,16 +1123,6 @@ function collectAlerts() {
       });
     });
   });
-  state.documents.forEach((record) => items.push({
-    title: record.document_name || "Documento",
-    detail: record.vehicle_code || "Sin vehiculo",
-    status: statusFromDate(record.expires_at)
-  }));
-  state.services.forEach((record) => items.push({
-    title: record.service_type || "Servicio",
-    detail: record.vehicle_code || "Sin vehiculo",
-    status: statusFromDate(record.next_service_date)
-  }));
   state.gps.forEach((record) => items.push({
     title: record.gps_name || "GPS",
     detail: record.vehicle_code || "Sin vehiculo",
