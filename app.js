@@ -289,6 +289,7 @@ function applyTheme(theme) {
 function showApp() {
   $("#login-screen").classList.add("is-hidden");
   $("#app-shell").classList.remove("is-hidden");
+  $("#app-shell").dataset.activeView = activeView;
   renderAll();
 }
 
@@ -337,6 +338,7 @@ function navIcon(name) {
 
 function switchView(view) {
   activeView = view;
+  $("#app-shell").dataset.activeView = activeView;
   $$(".view").forEach((section) => section.classList.remove("active-view"));
   $(`#${view}-view`).classList.add("active-view");
   $("#view-title").textContent = modules.find((item) => item.id === view).title;
@@ -361,15 +363,14 @@ function renderDashboard() {
   const balance = income - expenses;
   const loans = loanSummary();
   const cashAvailable = balance - loans.outstanding;
-  const vehicleProfitRows = getVehicleProfitability();
 
   $("#dashboard-view").innerHTML = `
-    ${alertTicker(alertItems)}
     <section class="dashboard-intro">
       <button class="menu-visual-btn" type="button" aria-label="Menu">${navIcon("menu")}</button>
       <div class="intro-copy">
-        <p>LaBeSa Movilidad</p>
-        <h3>Inicio</h3>
+        <p>¡Buenas noches! 👋</p>
+        <h3>LaBeSa Movilidad</h3>
+        <span>Inicio</span>
       </div>
       <button class="notification-visual-btn" type="button" aria-label="Alertas">${navIcon("bell")}</button>
       <img class="intro-logo" src="assets/logo-labesa-oficial.jpeg" alt="LaBeSa Movilidad" />
@@ -398,7 +399,7 @@ function renderDashboard() {
         <span class="status-pill">Excelente</span>
       </div>
       <div class="hero-car-stage">
-        <img class="hero-car-image" src="assets/hyundai-i10.svg" alt="Hyundai i10" />
+        <img class="hero-car-image" src="assets/hyundai-i10-photo.png" alt="Hyundai i10" />
       </div>
       <div class="hero-lines">
         <span>${navIcon("settings")} Version operativa<br><b>v8</b></span>
@@ -417,10 +418,6 @@ function renderDashboard() {
       ${premiumStatCard("Conductores", state.drivers.length, "capturados", "user", "purple")}
       ${premiumStatCard("Calendario", alertItems.length, "proximos eventos", "calendar", "blue")}
       ${premiumStatCard("Ingresos", money(income), "este mes", "money", "green")}
-      ${premiumStatCard("Gastos", money(expenses), "este mes", "money", "gold")}
-      ${premiumStatCard("Utilidad operativa", money(balance), "sin prestamos", "chart", "teal")}
-      ${premiumStatCard("Caja disponible", money(cashAvailable), "utilidad - por cobrar", "wallet", "green")}
-      ${premiumStatCard("Prestamos por cobrar", money(loans.outstanding), `${loans.activeCount} activos`, "file", "blue")}
     </div>
 
     <section class="module-panel premium-actions-panel">
@@ -438,41 +435,6 @@ function renderDashboard() {
       </div>
     </section>
 
-    <div class="dashboard-layout premium-dashboard-layout">
-      <section class="module-panel dashboard-access-panel">
-        <div class="panel-header">
-          <div>
-            <h3>Accesos rapidos</h3>
-            <p>Control operativo de flotilla</p>
-          </div>
-        </div>
-        <div class="quick-grid">
-          ${modules.slice(1).map((item) => `
-            <button class="quick-card" data-view="${item.id}" type="button">
-              <span>${navIcon(item.icon)}</span>
-              ${item.title}
-            </button>
-          `).join("")}
-        </div>
-      </section>
-      <section class="module-panel dashboard-alert-panel">
-        <div class="panel-header">
-          <div>
-            <h3>Alertas prioritarias</h3>
-            <p>Verde vigente, amarillo proximo, rojo vencido</p>
-          </div>
-          <button class="text-link" data-view="vehicles" type="button">Ver calendario</button>
-        </div>
-        <div class="alerts-list">
-          ${alertItems.length ? alertItems.slice(0, 8).map(alertRow).join("") : `<div class="empty-state">No hay vencimientos criticos.</div>`}
-        </div>
-      </section>
-    </div>
-
-    <section class="module-panel profitability-card dashboard-profitability premium-profitability">
-      <h3>Rentabilidad por vehiculo</h3>
-      ${vehicleProfitRows.length ? vehicleProfitRows.map((row) => profitRow(row.label, row.percent, row.balance)).join("") : `<div class="empty-state">Sin datos financieros por vehiculo.</div>`}
-    </section>
   `;
   $$("#dashboard-view [data-view]").forEach((button) => button.addEventListener("click", () => switchView(button.dataset.view)));
 }
