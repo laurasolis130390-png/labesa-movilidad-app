@@ -1,4 +1,5 @@
--- Campos nuevos para vehiculos y choferes.
+-- Actualizacion completa de operacion de flotilla.
+-- Incluye documentos de vehiculo, verificaciones, servicios y contratos.
 -- Ejecutar una sola vez en Supabase SQL Editor.
 
 alter table if exists public.vehicles
@@ -18,8 +19,16 @@ alter table if exists public.drivers
   add column if not exists contract_end date,
   add column if not exists contract_renewal_date date;
 
+alter table if exists public.services
+  add column if not exists current_km numeric,
+  add column if not exists next_km numeric,
+  add column if not exists next_service_date date,
+  add column if not exists cost numeric default 0,
+  add column if not exists status text default 'pendiente';
+
 insert into storage.buckets (id, name, public)
 values
   ('vehicle-documents', 'vehicle-documents', true),
-  ('driver-photos', 'driver-photos', true)
+  ('driver-photos', 'driver-photos', true),
+  ('service-receipts', 'service-receipts', true)
 on conflict (id) do nothing;

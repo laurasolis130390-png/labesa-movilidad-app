@@ -242,6 +242,12 @@ textarea:focus {
   background: var(--brand-cyan);
 }
 
+.nav-icon svg {
+  width: 17px;
+  height: 17px;
+  fill: currentColor;
+}
+
 .workspace {
   min-width: 0;
   padding: 20px 24px 32px;
@@ -732,6 +738,87 @@ textarea:focus {
 
 .list-row small {
   color: #b7ddf1;
+}
+
+.service-history {
+  display: grid;
+  gap: 12px;
+}
+
+.service-row {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(37, 215, 199, 0.16);
+  border-radius: 14px;
+  background: rgba(0, 31, 67, 0.35);
+}
+
+.service-row-main {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  min-height: auto;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+}
+
+.service-row-main strong,
+.service-row-main small {
+  display: block;
+}
+
+.service-row-main strong {
+  color: var(--brand-white);
+}
+
+.service-row-main small,
+.service-row p {
+  color: #b7ddf1;
+}
+
+.service-row-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.service-row-meta span {
+  padding: 8px;
+  border-radius: 10px;
+  color: #b7ddf1;
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 0.82rem;
+}
+
+.service-row-meta b {
+  color: var(--brand-white);
+}
+
+.service-row p {
+  margin: 0;
+}
+
+.light-theme .service-row {
+  border-color: #d6e7f2;
+  background: #f7fbfd;
+}
+
+.light-theme .service-row-main strong,
+.light-theme .service-row-meta b {
+  color: var(--brand-navy);
+}
+
+.light-theme .service-row-main small,
+.light-theme .service-row p,
+.light-theme .service-row-meta span {
+  color: var(--muted);
+}
+
+.light-theme .service-row-meta span {
+  background: #eef6fb;
 }
 
 .chart-bars {
@@ -1631,6 +1718,10 @@ textarea:focus {
     flex-direction: column;
   }
 
+  .service-row-meta {
+    grid-template-columns: 1fr;
+  }
+
   .profile-grid {
     grid-template-columns: 1fr;
   }
@@ -1686,9 +1777,9 @@ textarea:focus {
     width: min(100%, 430px);
     z-index: 20;
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 6px;
-    padding: 12px 14px;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+    padding: 10px 10px;
     border-top: 1px solid rgba(37, 215, 199, 0.2);
     background: #082f52;
     box-shadow: 0 -10px 28px rgba(0, 0, 0, 0.22);
@@ -1726,7 +1817,7 @@ textarea:focus {
     gap: 3px;
     padding: 5px 2px;
     color: #6d7888;
-    font-size: 0.72rem;
+    font-size: 0.64rem;
     text-align: center;
   }
 
@@ -1737,8 +1828,8 @@ textarea:focus {
   }
 
   .bottom-nav .nav-icon {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     font-size: 0.8rem;
     color: currentColor;
     background: transparent;
