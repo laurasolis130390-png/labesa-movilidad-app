@@ -8,6 +8,13 @@ const STORE_KEY = "labesa-movilidad-local";
 const THEME_KEY = "labesa-movilidad-theme";
 const WIALON_STORE_KEY = "labesa-wialon-config";
 const today = new Date();
+const verificationSchedule = {
+  amarillo: { first: [1, 2], second: [7, 8], plates: "5 y 6" },
+  rosa: { first: [2, 3], second: [8, 9], plates: "7 y 8" },
+  rojo: { first: [3, 4], second: [9, 10], plates: "3 y 4" },
+  verde: { first: [4, 5], second: [10, 11], plates: "1 y 2" },
+  azul: { first: [5, 6], second: [11, 12], plates: "9 y 0" }
+};
 
 const modules = [
   { id: "dashboard", title: "Dashboard general", icon: "D" },
@@ -34,18 +41,21 @@ const fieldSets = {
     ["unit_type", "Tipo de unidad", "text"],
     ["brand", "Marca", "text"],
     ["model", "Modelo", "text"],
-    ["year", "Ano", "number"],
+    ["year", "Año", "number"],
     ["color", "Color", "text"],
     ["plates", "Placas", "text"],
     ["vin", "Numero de serie / VIN", "text"],
-    ["engine_number", "Numero de motor", "text"],
-    ["driver_name", "Chofer asignado", "text"],
+    ["driver_name", "Chofer asignado", "driver-select"],
     ["status", "Estatus", "select", ["activo", "inactivo", "taller", "disponible", "rentado"]],
     ["photo_url", "Foto del coche (URL publica)", "url"],
     ["__file_photo_url", "Subir foto del coche", "file", "vehicle-photos", "photo_url"],
+    ["circulation_card_photo_url", "Subir foto de tarjeta de circulacion", "file", "vehicle-documents", "circulation_card_photo_url"],
+    ["insurance_policy_photo_url", "Subir foto de poliza de seguro", "file", "vehicle-documents", "insurance_policy_photo_url"],
+    ["verification_sticker", "Engomado", "sticker-select"],
+    ["first_verification_due", "Verificacion primer semestre", "date"],
+    ["second_verification_due", "Verificacion segundo semestre", "date"],
     ["insurance_expires_at", "Vencimiento de seguro", "date"],
     ["registration_expires_at", "Vencimiento tarjeta de circulacion", "date"],
-    ["verification_expires_at", "Vencimiento verificacion", "date"],
     ["tax_expires_at", "Vencimiento tenencia", "date"],
     ["gps_expires_at", "Vencimiento GPS", "date"],
     ["next_service_date", "Proximo servicio", "date"],
@@ -61,6 +71,7 @@ const fieldSets = {
     ["license", "Licencia", "text"],
     ["license_expiration", "Vencimiento de licencia", "date"],
     ["vehicle_assigned", "Vehiculo asignado", "vehicle-select"],
+    ["license_photo_url", "Subir foto de licencia", "file", "driver-photos", "license_photo_url"],
     ["photo_url", "Foto del chofer (URL publica)", "url"],
     ["__file_photo_url", "Subir foto del chofer", "file", "driver-photos", "photo_url"],
     ["status", "Estatus", "select", ["activo", "inactivo", "suspendido"]],
@@ -210,8 +221,18 @@ function init() {
   bindDialog();
   bindVehicleProfileDialog();
   renderAll();
+  restoreSession();
   if (!hasSupabase) {
     $("#auth-message").textContent = "Modo revision: agrega credenciales Supabase en config.js para datos reales.";
+  }
+}
+
+async function restoreSession() {
+  if (!hasSupabase) return;
+  const { data } = await supabaseClient.auth.getSession();
+  if (data.session?.user?.id) {
+    await syncFromSupabase();
+    showApp();
   }
 }
 
@@ -301,8 +322,6 @@ function renderAll() {
   renderDashboard();
   renderModule("vehicles", "Vehiculos registrados", "Busca, filtra y administra cada unidad.");
   renderModule("drivers", "Choferes", "Licencias, estatus y asignaciones.");
-  renderModule("documents", "Documentos del vehiculo", "Semaforo automatico por vencimiento.");
-  renderModule("services", "Servicios y mantenimientos", "Historial por unidad y proximos servicios.");
   renderModule("gps", "GPS / Wialon", "Preparado para integracion con API de Wialon.");
   renderFinance();
 }
@@ -310,16 +329,15 @@ function renderAll() {
 function renderDashboard() {
   const activeVehicles = state.vehicles.filter((v) => v.status === "activo").length;
   const alertItems = collectAlerts();
-  const pendingServices = state.vehicles.filter((v) => statusFromDate(v.next_service_date).key !== "green").length;
   const income = sum(state.income);
   const expenses = sum(state.expenses);
   const balance = income - expenses;
   const loans = loanSummary();
   const cashAvailable = balance - loans.outstanding;
-  const maxMoney = Math.max(income, expenses, 1);
   const vehicleProfitRows = getVehicleProfitability();
 
   $("#dashboard-view").innerHTML = `
+    ${alertTicker(alertItems)}
     <section class="hero-card">
       <img class="hero-logo" src="assets/logo-labesa-oficial.jpeg" alt="LaBeSa Movilidad" />
       <div class="hero-copy">
@@ -349,25 +367,10 @@ function renderDashboard() {
     </div>
     <button class="primary-btn wide-action" data-view="finance" type="button">Registrar ingreso o gasto</button>
 
-    <div class="insight-grid">
-      <section class="module-panel chart-card">
-        <div class="panel-header">
-          <div>
-            <h3>Ingresos vs gastos</h3>
-            <p>Mes actual, sin prestamos</p>
-          </div>
-          <strong>${money(cashAvailable)} caja disponible</strong>
-        </div>
-        <div class="mini-bars" aria-label="Grafica visual de ingresos y gastos">
-          ${financeBars(income, expenses)}
-        </div>
-      </section>
-
-      <section class="module-panel profitability-card">
-        <h3>Rentabilidad por vehiculo</h3>
-        ${vehicleProfitRows.length ? vehicleProfitRows.map((row) => profitRow(row.label, row.percent, row.balance)).join("") : `<div class="empty-state">Sin datos financieros por vehiculo.</div>`}
-      </section>
-    </div>
+    <section class="module-panel profitability-card dashboard-profitability">
+      <h3>Rentabilidad por vehiculo</h3>
+      ${vehicleProfitRows.length ? vehicleProfitRows.map((row) => profitRow(row.label, row.percent, row.balance)).join("") : `<div class="empty-state">Sin datos financieros por vehiculo.</div>`}
+    </section>
 
     <div class="dashboard-layout">
       <section class="module-panel">
@@ -398,39 +401,23 @@ function renderDashboard() {
           ${alertItems.length ? alertItems.slice(0, 8).map(alertRow).join("") : `<div class="empty-state">No hay vencimientos criticos.</div>`}
         </div>
       </section>
-      <section class="module-panel">
-        <div class="panel-header">
-          <div>
-            <h3>Servicios pendientes</h3>
-            <p>${pendingServices} servicio(s) requieren seguimiento</p>
-          </div>
-        </div>
-        <div class="alerts-list">
-          ${state.vehicles.filter((vehicle) => vehicle.next_service_date).slice(0, 6).map((vehicle) => alertRow({
-            title: `Servicio ${vehicle.internal_code || vehicle.plates || "Unidad"}`,
-            detail: vehicle.model || vehicle.brand || "Vehiculo",
-            status: statusFromDate(vehicle.next_service_date)
-          })).join("") || `<div class="empty-state">Aun no hay servicios programados.</div>`}
-        </div>
-      </section>
-      <section class="module-panel">
-        <div class="panel-header">
-          <div>
-            <h3>Balance y prestamos</h3>
-            <p>${money(balance)} utilidad operativa / ${money(loans.outstanding)} por cobrar</p>
-          </div>
-        </div>
-        <div class="chart-bars">
-          ${barRow("Ingresos", income, maxMoney, "income")}
-          ${barRow("Egresos", expenses, maxMoney, "expense")}
-          ${barRow("Utilidad operativa", Math.max(balance, 0), maxMoney, "")}
-          ${barRow("Por cobrar", loans.outstanding, Math.max(maxMoney, loans.outstanding, 1), "")}
-          ${barRow("Caja disponible", Math.max(cashAvailable, 0), Math.max(maxMoney, loans.outstanding, 1), "income")}
-        </div>
-      </section>
     </div>
   `;
   $$("#dashboard-view [data-view]").forEach((button) => button.addEventListener("click", () => switchView(button.dataset.view)));
+}
+
+function alertTicker(alertItems) {
+  if (!alertItems.length) return "";
+  const text = alertItems
+    .slice(0, 8)
+    .map((item) => `${item.status.label}: ${item.title}`)
+    .join("   |   ");
+  return `
+    <section class="alert-ticker" aria-label="Alertas prioritarias">
+      <strong>Alertas prioritarias</strong>
+      <div><span>${escapeHtml(text)}</span></div>
+    </section>
+  `;
 }
 
 function renderModule(type, title, subtitle) {
@@ -979,6 +966,7 @@ function openRecord(type, id = null) {
   $("#dialog-title").textContent = `${id ? "Editar" : "Nuevo"} ${labelForType(type)}`;
   $("#delete-record").classList.toggle("is-hidden", !id);
   $("#dialog-fields").innerHTML = fieldSets[type].map((field) => inputForField(field, record)).join("");
+  bindDialogFieldHelpers(type);
   $("#record-dialog").showModal();
 }
 
@@ -989,6 +977,41 @@ function applyRecordDefaults(type, record) {
   if (type === "vehicles" && !record.internal_code) {
     record.internal_code = `LB-${String(record.id || crypto.randomUUID()).slice(0, 6).toUpperCase()}`;
   }
+  if (type === "vehicles" && record.verification_sticker) {
+    const dates = verificationDatesFromSticker(record.verification_sticker);
+    record.first_verification_due = record.first_verification_due || dates.first;
+    record.second_verification_due = record.second_verification_due || dates.second;
+  }
+}
+
+function bindDialogFieldHelpers(type) {
+  if (type !== "vehicles") return;
+  const sticker = $("#dialog-fields select[name='verification_sticker']");
+  if (!sticker) return;
+  const updateVerificationDates = () => {
+    const dates = verificationDatesFromSticker(sticker.value);
+    const first = $("#dialog-fields input[name='first_verification_due']");
+    const second = $("#dialog-fields input[name='second_verification_due']");
+    if (first) first.value = dates.first;
+    if (second) second.value = dates.second;
+  };
+  sticker.addEventListener("change", updateVerificationDates);
+  if (sticker.value) updateVerificationDates();
+}
+
+function verificationDatesFromSticker(sticker) {
+  const year = today.getFullYear();
+  const rule = verificationSchedule[sticker] || null;
+  if (!rule) return { first: "", second: "" };
+  return {
+    first: lastDayOfMonth(year, rule.first[1]),
+    second: lastDayOfMonth(year, rule.second[1])
+  };
+}
+
+function lastDayOfMonth(year, monthNumber) {
+  const date = new Date(year, monthNumber, 0);
+  return date.toISOString().slice(0, 10);
 }
 
 function bindVehicleProfileDialog() {
@@ -1029,8 +1052,9 @@ function openVehicleProfile(id) {
         <h4>Datos del coche</h4>
         ${profileLine("Codigo", code || "Sin codigo")}
         ${profileLine("Tipo", vehicle.unit_type || "Sin tipo")}
-        ${profileLine("Anio", vehicle.year || "Sin anio")}
+        ${profileLine("Año", vehicle.year || "Sin año")}
         ${profileLine("Color", vehicle.color || "Sin color")}
+        ${profileLine("Engomado", vehicle.verification_sticker ? capitalize(vehicle.verification_sticker) : "Sin engomado")}
         ${profileLine("VIN", vehicle.vin || "Sin VIN")}
       </article>
 
@@ -1046,6 +1070,14 @@ function openVehicleProfile(id) {
         <h4>Calendario</h4>
         <div class="profile-calendar">
           ${vehicleCalendarRows(vehicle)}
+        </div>
+      </article>
+
+      <article class="profile-box profile-box-wide">
+        <h4>Documentos del coche</h4>
+        <div class="profile-docs">
+          ${profileAttachment("Tarjeta de circulacion", vehicle.circulation_card_photo_url)}
+          ${profileAttachment("Poliza de seguro", vehicle.insurance_policy_photo_url)}
         </div>
       </article>
 
@@ -1083,10 +1115,21 @@ function profileLine(label, value) {
   return `<p class="profile-line"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></p>`;
 }
 
+function profileAttachment(label, url) {
+  return `
+    <p class="profile-line">
+      <span>${escapeHtml(label)}</span>
+      <strong>${url ? `<a href="${escapeAttr(url)}" target="_blank" rel="noopener">Ver archivo</a>` : "Sin archivo"}</strong>
+    </p>
+  `;
+}
+
 function vehicleCalendarRows(vehicle) {
   const rows = [
     ["Seguro", vehicle.insurance_expires_at],
     ["Tarjeta", vehicle.registration_expires_at],
+    ["Verificacion 1er semestre", vehicle.first_verification_due],
+    ["Verificacion 2do semestre", vehicle.second_verification_due],
     ["Verificacion", vehicle.verification_expires_at],
     ["Tenencia", vehicle.tax_expires_at],
     ["GPS", vehicle.gps_expires_at],
@@ -1130,6 +1173,30 @@ function inputForField([name, label, type, options], record = {}) {
         <select name="${name}">
           <option value="">Seleccionar vehiculo</option>
           ${vehicleOptions.map((option) => `<option value="${escapeAttr(option)}" ${value === option ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}
+        </select>
+      </label>
+    `;
+  }
+  if (type === "driver-select") {
+    const driverOptions = state.drivers.map((driver) => ({
+      value: driver.full_name || driver.internal_code || "",
+      label: [driver.internal_code, driver.full_name].filter(Boolean).join(" - ")
+    })).filter((driver) => driver.value);
+    return `
+      <label>${label}
+        <select name="${name}">
+          <option value="">Seleccionar chofer</option>
+          ${driverOptions.map((option) => `<option value="${escapeAttr(option.value)}" ${value === option.value ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+        </select>
+      </label>
+    `;
+  }
+  if (type === "sticker-select") {
+    return `
+      <label>${label}
+        <select name="${name}">
+          <option value="">Seleccionar engomado</option>
+          ${Object.entries(verificationSchedule).map(([key, rule]) => `<option value="${key}" ${value === key ? "selected" : ""}>${capitalize(key)} - placas ${rule.plates}</option>`).join("")}
         </select>
       </label>
     `;
@@ -1235,6 +1302,8 @@ function vehicleCalendarStatus(vehicle) {
   const statuses = [
     vehicle.insurance_expires_at,
     vehicle.registration_expires_at,
+    vehicle.first_verification_due,
+    vehicle.second_verification_due,
     vehicle.verification_expires_at,
     vehicle.tax_expires_at,
     vehicle.gps_expires_at,
@@ -1265,6 +1334,8 @@ function collectAlerts() {
     [
       ["Seguro", vehicle.insurance_expires_at],
       ["Tarjeta de circulacion", vehicle.registration_expires_at],
+      ["Verificacion primer semestre", vehicle.first_verification_due],
+      ["Verificacion segundo semestre", vehicle.second_verification_due],
       ["Verificacion", vehicle.verification_expires_at],
       ["Tenencia", vehicle.tax_expires_at],
       ["GPS", vehicle.gps_expires_at],
@@ -1325,7 +1396,7 @@ function barRow(label, value, max, className) {
 
 function metaFor(type, record) {
   const map = {
-    vehicles: [`Placas: ${record.plates || "N/D"}`, `Modelo: ${record.model || "N/D"}`, `Chofer: ${record.driver_name || "Sin asignar"}`, `Prox. servicio: ${record.next_service_date || "Sin fecha"}`],
+    vehicles: [`Placas: ${record.plates || "N/D"}`, `Modelo: ${record.model || "N/D"}`, `Engomado: ${record.verification_sticker || "N/D"}`, `Chofer: ${record.driver_name || "Sin asignar"}`, `Prox. servicio: ${record.next_service_date || "Sin fecha"}`],
     drivers: [`Codigo: ${record.internal_code || "N/D"}`, `Telefono: ${record.phone || "N/D"}`, `Vehiculo: ${record.vehicle_assigned || "Sin asignar"}`, `Licencia: ${record.license_expiration || "Sin fecha"}`],
     documents: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Vence: ${record.expires_at || "Sin fecha"}`],
     services: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Proximo: ${record.next_service_date || "Sin fecha"}`, `Costo: ${money(record.cost || 0)}`],
@@ -1385,6 +1456,11 @@ function isoDate(offsetDays) {
 
 function initials(text) {
   return String(text || "LB").split(/\s|-/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+}
+
+function capitalize(text) {
+  const value = String(text || "");
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : "";
 }
 
 function escapeHtml(value) {

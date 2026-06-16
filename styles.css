@@ -352,7 +352,8 @@ textarea:focus {
 }
 
 .light-theme .list-row,
-.light-theme .empty-state {
+.light-theme .empty-state,
+.light-theme .alert-ticker {
   color: var(--ink);
   border-color: #d6e7f2;
   background: #f7fbfd;
@@ -365,6 +366,47 @@ textarea:focus {
   border-radius: 50%;
   height: auto;
   border: 2px solid var(--brand-cyan);
+}
+
+.alert-ticker {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  border: 1px solid rgba(213, 161, 30, 0.36);
+  border-radius: 14px;
+  padding: 10px 12px;
+  color: var(--brand-white);
+  background: rgba(213, 161, 30, 0.16);
+}
+
+.alert-ticker strong {
+  color: var(--warning);
+  white-space: nowrap;
+}
+
+.alert-ticker div {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.alert-ticker span {
+  display: inline-block;
+  min-width: 100%;
+  white-space: nowrap;
+  animation: ticker 22s linear infinite;
+}
+
+@keyframes ticker {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(-100%);
+  }
 }
 
 .hero-card {
@@ -1075,7 +1117,16 @@ textarea:focus {
   overflow-wrap: anywhere;
 }
 
+.profile-line a {
+  color: var(--brand-blue);
+}
+
 .profile-calendar {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-docs {
   display: grid;
   gap: 8px;
 }
@@ -1514,6 +1565,11 @@ textarea:focus {
     grid-template-columns: 74px 1fr;
     padding: 22px;
     border-radius: 20px;
+  }
+
+  .alert-ticker {
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
 
   .hero-action {
