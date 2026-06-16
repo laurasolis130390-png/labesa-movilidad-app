@@ -17,7 +17,7 @@ const verificationSchedule = {
 };
 
 const modules = [
-  { id: "dashboard", title: "Dashboard general", icon: "home" },
+  { id: "dashboard", title: "Inicio", icon: "home" },
   { id: "vehicles", title: "Vehiculos", icon: "car" },
   { id: "gps", title: "GPS", icon: "globe" },
   { id: "finance", title: "Finanzas", icon: "money" },
@@ -318,7 +318,19 @@ function navIcon(name) {
     globe: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm6.6 8h-3.1a14.8 14.8 0 0 0-1.2-5.1A7 7 0 0 1 18.6 11zM12 5.1c.7 1.1 1.3 3.1 1.5 5.9h-3c.2-2.8.8-4.8 1.5-5.9zM5.4 13h3.1c.1 2 .5 3.8 1.2 5.1A7 7 0 0 1 5.4 13zm3.1-2H5.4a7 7 0 0 1 4.3-5.1A14.8 14.8 0 0 0 8.5 11zm3.5 7.9c-.7-1.1-1.3-3.1-1.5-5.9h3c-.2 2.8-.8 4.8-1.5 5.9zm2.3-.8c.7-1.3 1.1-3.1 1.2-5.1h3.1a7 7 0 0 1-4.3 5.1z"/></svg>`,
     money: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3v2.1c1.7.3 3 1.2 4 2.5l-2 1.5c-.8-1-1.7-1.5-3-1.5-1.2 0-2 .5-2 1.3 0 .9.8 1.2 2.8 1.7 2.7.7 4.5 1.7 4.5 4.2 0 2.2-1.7 3.8-4.3 4.2V21h-2v-2c-2-.3-3.6-1.4-4.7-3l2.1-1.4c.9 1.2 2 1.8 3.6 1.8 1.5 0 2.3-.6 2.3-1.5 0-.8-.6-1.2-2.7-1.7-2.7-.7-4.6-1.7-4.6-4.2 0-2.1 1.6-3.6 4-3.9V3z"/></svg>`,
     user: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm0 2c-4.4 0-8 2.4-8 5.3V21h16v-1.7c0-2.9-3.6-5.3-8-5.3z"/></svg>`,
-    tool: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 7.2a6.4 6.4 0 0 1-7.8 7.8l-6.4 6.4-4.2-4.2L9 10.8A6.4 6.4 0 0 1 16.8 3l-4 4 4.2 4.2z"/></svg>`
+    tool: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 7.2a6.4 6.4 0 0 1-7.8 7.8l-6.4 6.4-4.2-4.2L9 10.8A6.4 6.4 0 0 1 16.8 3l-4 4 4.2 4.2z"/></svg>`,
+    bell: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a2.5 2.5 0 0 0 2.4-2h-4.8A2.5 2.5 0 0 0 12 22zm7-6v-5.4A7 7 0 0 0 14 4V2h-4v2a7 7 0 0 0-5 6.6V16l-2 2v1h18v-1z"/></svg>`,
+    alert: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 1.8 20h20.4zM11 8h2v6h-2zm0 8h2v2h-2z"/></svg>`,
+    chevron: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7-1.4-1.4 5.6-5.6-5.6-5.6z"/></svg>`,
+    settings: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13.5c.1-.5.1-1 .1-1.5s0-1-.1-1.5l2-1.5-2-3.5-2.4 1a8 8 0 0 0-2.6-1.5L14 2h-4l-.4 2.5A8 8 0 0 0 7 6L4.6 5l-2 3.5 2 1.5A8 8 0 0 0 4.5 12c0 .5 0 1 .1 1.5l-2 1.5 2 3.5L7 17a8 8 0 0 0 2.6 1.5L10 21h4l.4-2.5A8 8 0 0 0 17 17l2.4 1 2-3.5zM12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg>`,
+    shield: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5zm-1 13.5-3.5-3.5 1.4-1.4 2.1 2.1 4.6-4.7 1.4 1.4z"/></svg>`,
+    chart: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16v2H2V4h2zm3-2h3V9H7zm5 0h3V5h-3zm5 0h3v-7h-3z"/></svg>`,
+    wallet: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5A3.5 3.5 0 0 1 6.5 3H20v4H6.5a1.5 1.5 0 0 0 0 3H22v10H5a3 3 0 0 1-3-3V6.5zm15 8.5a1.5 1.5 0 1 0 0 3h2v-3z"/></svg>`,
+    file: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h9l5 5v13H5zm8 1.8V9h4.2zM8 12h8v2H8zm0 4h8v2H8z"/></svg>`,
+    "user-plus": `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-7 2.1-7 5v1h12v-1c0-1.5.7-2.9 1.8-3.8A12.5 12.5 0 0 0 9 14zm10-1v3h3v2h-3v3h-2v-3h-3v-2h3v-3z"/></svg>`,
+    plus: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/></svg>`,
+    calendar: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h2v3h6V2h2v3h3v16H4V5h3zm11 8H6v9h12z"/></svg>`,
+    menu: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>`
   };
   return icons[name] || name;
 }
@@ -353,42 +365,81 @@ function renderDashboard() {
 
   $("#dashboard-view").innerHTML = `
     ${alertTicker(alertItems)}
-    <section class="hero-card">
-      <img class="hero-logo" src="assets/logo-labesa-oficial.jpeg" alt="LaBeSa Movilidad" />
+    <section class="dashboard-intro">
+      <button class="menu-visual-btn" type="button" aria-label="Menu">${navIcon("menu")}</button>
+      <div class="intro-copy">
+        <p>LaBeSa Movilidad</p>
+        <h3>Inicio</h3>
+      </div>
+      <button class="notification-visual-btn" type="button" aria-label="Alertas">${navIcon("bell")}</button>
+      <img class="intro-logo" src="assets/logo-labesa-oficial.jpeg" alt="LaBeSa Movilidad" />
+    </section>
+
+    <section class="alert-summary-card">
+      <div class="alert-summary-icon">${navIcon("alert")}</div>
+      <div>
+        <h3>Alertas prioritarias</h3>
+        <p>${alertItems.length ? `Tienes ${alertItems.length} alerta${alertItems.length === 1 ? "" : "s"} activa${alertItems.length === 1 ? "" : "s"} que requieren atencion.` : "No hay vencimientos criticos por ahora."}</p>
+      </div>
+      <button class="ghost-btn alert-summary-action" data-view="vehicles" type="button">Ver alertas ${navIcon("chevron")}</button>
+    </section>
+
+    <section class="hero-card premium-hero-card">
+      <div class="hero-brand-column">
+        <img class="hero-logo" src="assets/logo-labesa-oficial.jpeg" alt="LaBeSa Movilidad" />
+        <p>Acercamos personas y negocios.</p>
+        <button class="primary-btn hero-action" data-view="vehicles" type="button">
+          ${navIcon("car")} Ver mi flotilla ${navIcon("chevron")}
+        </button>
+      </div>
       <div class="hero-copy">
         <h3>LaBeSa Movilidad</h3>
         <p>Acercamos personas y negocios.</p>
         <span class="status-pill">Excelente</span>
       </div>
-      <button class="primary-btn hero-action" data-view="vehicles" type="button">Ver flotilla</button>
+      <div class="hero-car-stage">
+        <img class="hero-car-image" src="assets/hyundai-i10.svg" alt="Hyundai i10" />
+      </div>
       <div class="hero-lines">
-        <span>Version operativa v8 - Finanzas editables</span>
+        <span>${navIcon("settings")} Version operativa<br><b>v8</b></span>
+        <span>${navIcon("money")} Finanzas<br><b>editables</b></span>
+        <span>${navIcon("shield")} Datos seguros<br><b>y respaldados</b></span>
       </div>
     </section>
 
-    <div class="section-title-row">
+    <div class="section-title-row premium-section-title">
       <h3>Resumen operativo</h3>
+      <span class="date-chip">${navIcon("calendar")} ${new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "long", year: "numeric" }).format(today)}</span>
     </div>
 
-    <div class="stats-grid operational-grid">
-      ${statCard("Vehiculos", state.vehicles.length, `${activeVehicles} activos`)}
-      ${statCard("Conductores", state.drivers.length, "capturados")}
-      ${statCard("Calendario", alertItems.length, "alertas")}
-      ${statCard("Ingresos", money(income), "mes actual")}
-      ${statCard("Gastos", money(expenses), "mes actual")}
-      ${statCard("Utilidad operativa", money(balance), "sin prestamos")}
-      ${statCard("Caja disponible", money(cashAvailable), "utilidad - por cobrar")}
-      ${statCard("Prestamos por cobrar", money(loans.outstanding), `${loans.activeCount} activos`)}
+    <div class="stats-grid operational-grid premium-stats-grid">
+      ${premiumStatCard("Vehiculos", state.vehicles.length, `${activeVehicles} activos`, "car", "teal")}
+      ${premiumStatCard("Conductores", state.drivers.length, "capturados", "user", "purple")}
+      ${premiumStatCard("Calendario", alertItems.length, "proximos eventos", "calendar", "blue")}
+      ${premiumStatCard("Ingresos", money(income), "este mes", "money", "green")}
+      ${premiumStatCard("Gastos", money(expenses), "este mes", "money", "gold")}
+      ${premiumStatCard("Utilidad operativa", money(balance), "sin prestamos", "chart", "teal")}
+      ${premiumStatCard("Caja disponible", money(cashAvailable), "utilidad - por cobrar", "wallet", "green")}
+      ${premiumStatCard("Prestamos por cobrar", money(loans.outstanding), `${loans.activeCount} activos`, "file", "blue")}
     </div>
-    <button class="primary-btn wide-action" data-view="finance" type="button">Registrar ingreso o gasto</button>
 
-    <section class="module-panel profitability-card dashboard-profitability">
-      <h3>Rentabilidad por vehiculo</h3>
-      ${vehicleProfitRows.length ? vehicleProfitRows.map((row) => profitRow(row.label, row.percent, row.balance)).join("") : `<div class="empty-state">Sin datos financieros por vehiculo.</div>`}
+    <section class="module-panel premium-actions-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Acciones rapidas</h3>
+          <p>Atajos para operar sin perder tiempo</p>
+        </div>
+      </div>
+      <div class="quick-grid premium-actions-grid">
+        ${quickAction("Agregar vehiculo", "vehicles", "plus")}
+        ${quickAction("Nuevo conductor", "drivers", "user-plus")}
+        ${quickAction("Nuevo evento", "vehicles", "calendar")}
+        ${quickAction("Registrar ingreso", "finance", "file")}
+      </div>
     </section>
 
-    <div class="dashboard-layout">
-      <section class="module-panel">
+    <div class="dashboard-layout premium-dashboard-layout">
+      <section class="module-panel dashboard-access-panel">
         <div class="panel-header">
           <div>
             <h3>Accesos rapidos</h3>
@@ -398,13 +449,13 @@ function renderDashboard() {
         <div class="quick-grid">
           ${modules.slice(1).map((item) => `
             <button class="quick-card" data-view="${item.id}" type="button">
-              <span>${item.icon}</span>
+              <span>${navIcon(item.icon)}</span>
               ${item.title}
             </button>
           `).join("")}
         </div>
       </section>
-      <section class="module-panel">
+      <section class="module-panel dashboard-alert-panel">
         <div class="panel-header">
           <div>
             <h3>Alertas prioritarias</h3>
@@ -417,8 +468,34 @@ function renderDashboard() {
         </div>
       </section>
     </div>
+
+    <section class="module-panel profitability-card dashboard-profitability premium-profitability">
+      <h3>Rentabilidad por vehiculo</h3>
+      ${vehicleProfitRows.length ? vehicleProfitRows.map((row) => profitRow(row.label, row.percent, row.balance)).join("") : `<div class="empty-state">Sin datos financieros por vehiculo.</div>`}
+    </section>
   `;
   $$("#dashboard-view [data-view]").forEach((button) => button.addEventListener("click", () => switchView(button.dataset.view)));
+}
+
+function premiumStatCard(label, value, detail, icon, tone) {
+  return `
+    <article class="stat-card premium-stat-card tone-${tone}">
+      <span class="premium-stat-icon">${navIcon(icon)}</span>
+      <p>${label}</p>
+      <strong>${value}</strong>
+      <small>${detail}</small>
+      <span class="stat-sparkline" aria-hidden="true"></span>
+    </article>
+  `;
+}
+
+function quickAction(label, view, icon) {
+  return `
+    <button class="quick-card premium-action-card" data-view="${view}" type="button">
+      <span>${navIcon(icon)}</span>
+      ${label}
+    </button>
+  `;
 }
 
 function alertTicker(alertItems) {

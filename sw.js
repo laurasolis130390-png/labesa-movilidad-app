@@ -1,11 +1,12 @@
-const CACHE_NAME = "labesa-movilidad-v3";
+const CACHE_NAME = "labesa-movilidad-v4";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/styles.css",
   "/app.js",
   "/manifest.webmanifest",
-  "/assets/logo-labesa-oficial.jpeg"
+  "/assets/logo-labesa-oficial.jpeg",
+  "/assets/hyundai-i10.svg"
 ];
 
 self.addEventListener("install", (event) => {
