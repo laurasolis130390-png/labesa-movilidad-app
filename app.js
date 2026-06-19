@@ -386,20 +386,20 @@ function renderDashboard() {
       <button class="ghost-btn alert-summary-action" data-view="vehicles" type="button">Ver alertas ${navIcon("chevron")}</button>
     </section>
 
-    <section class="hero-card premium-hero-card">
-      <div class="hero-brand-column">
-        <img class="hero-logo" src="assets/logo-labesa-app.png" alt="LaBeSa Movilidad" />
+    <section class="fleet-hero-card">
+      <div class="fleet-hero-brand">
+        <img class="fleet-hero-logo" src="assets/logo-labesa-app.png" alt="LaBeSa Movilidad" />
         <p>Acercamos personas y negocios.</p>
       </div>
-      <div class="hero-copy">
+      <div class="fleet-hero-copy">
         <h3>LaBeSa Movilidad</h3>
         <p>Acercamos personas y negocios.</p>
-        <span class="status-pill">Excelente</span>
+        <span class="fleet-status-pill">Excelente</span>
       </div>
-      <div class="hero-car-stage">
-        <img class="hero-car-image" src="assets/hyundai-i10-photo.png" alt="Hyundai i10" />
+      <div class="fleet-car-stage">
+        <img class="fleet-car-image" src="assets/hyundai-i10-photo.png" alt="Hyundai i10" />
       </div>
-      <button class="primary-btn hero-action" data-view="vehicles" type="button">
+      <button class="fleet-hero-button" data-view="vehicles" type="button">
         ${navIcon("car")} Ver mi flotilla ${navIcon("chevron")}
       </button>
     </section>
