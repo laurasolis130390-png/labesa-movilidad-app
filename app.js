@@ -51,7 +51,7 @@ const fieldSets = {
     ["photo_url", "Foto del coche (URL publica)", "url"],
     ["__file_photo_url", "Subir foto del coche", "file", "vehicle-photos", "photo_url"],
     ["circulation_card_photo_url", "Subir foto de tarjeta de circulacion", "file", "vehicle-documents", "circulation_card_photo_url"],
-    ["insurance_policy_photo_url", "Subir foto de poliza de seguro", "file", "vehicle-documents", "insurance_policy_photo_url"],
+    ["__file_insurance_policy_photo_url", "Subir PDF de poliza de seguro", "file", "vehicle-documents", "insurance_policy_photo_url", ".pdf,application/pdf"],
     ["verification_sticker", "Engomado", "sticker-select"],
     ["first_verification_due", "Verificacion primer semestre", "date"],
     ["first_verification_status", "Estatus primer semestre", "select", ["pendiente", "verificado"]],
@@ -400,11 +400,6 @@ function renderDashboard() {
       </div>
       <div class="hero-car-stage">
         <img class="hero-car-image" src="assets/hyundai-i10-photo.png" alt="Hyundai i10" />
-      </div>
-      <div class="hero-lines">
-        <span>${navIcon("settings")} Version operativa<br><b>v8</b></span>
-        <span>${navIcon("money")} Finanzas<br><b>editables</b></span>
-        <span>${navIcon("shield")} Datos seguros<br><b>y respaldados</b></span>
       </div>
     </section>
 
@@ -1296,7 +1291,7 @@ function profileMovementRow(record) {
   `;
 }
 
-function inputForField([name, label, type, options], record = {}) {
+function inputForField([name, label, type, options, targetField, accept], record = {}) {
   const value = record[name] || "";
   const full = type === "textarea" ? " full" : "";
   if (type === "textarea") {
@@ -1338,7 +1333,8 @@ function inputForField([name, label, type, options], record = {}) {
     `;
   }
   if (type === "file") {
-    return `<label>${label}<input name="${name}" type="file" /></label>`;
+    const acceptAttr = accept ? ` accept="${escapeAttr(accept)}"` : "";
+    return `<label>${label}<input name="${name}" type="file"${acceptAttr} /></label>`;
   }
   if (type === "select") {
     return `
