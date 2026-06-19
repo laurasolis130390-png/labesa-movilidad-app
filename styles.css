@@ -3598,7 +3598,7 @@ textarea:focus {
   overflow: hidden !important;
   border: 1px solid rgba(31, 214, 202, 0.28) !important;
   border-radius: 18px !important;
-  background: url("assets/dashboard-fleet-card.png") center / 100% 100% no-repeat !important;
+  background: url("assets/dashboard-hero-reference.png") top center / 100% auto no-repeat !important;
   box-shadow: 0 24px 52px rgba(0, 0, 0, 0.25) !important;
 }
 
