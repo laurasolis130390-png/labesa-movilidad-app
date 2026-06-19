@@ -124,6 +124,9 @@ const fieldSets = {
     ["vehicle_code", "Vehiculo", "vehicle-select"],
     ["driver_name", "Chofer", "text"],
     ["concept", "Concepto", "text"],
+    ["finance_bucket", "Modulo financiero", "select", ["renta", "inversion", "otro_ingreso"]],
+    ["finance_subcategory", "Subcategoria", "text"],
+    ["classification_status", "Clasificacion", "select", ["auto", "manual", "revision"]],
     ["date", "Fecha", "date"],
     ["amount", "Monto", "number"],
     ["payment_method", "Metodo de pago", "text"],
@@ -135,6 +138,9 @@ const fieldSets = {
     ["concept", "Concepto", "text"],
     ["date", "Fecha", "date"],
     ["amount", "Monto", "number"],
+    ["finance_bucket", "Modulo financiero", "select", ["mantenimiento", "activo", "otro_egreso"]],
+    ["finance_subcategory", "Subcategoria", "text"],
+    ["classification_status", "Clasificacion", "select", ["auto", "manual", "revision"]],
     ["category", "Categoria", "select", ["gasolina", "mantenimiento", "GPS", "seguro", "refaccion", "multa", "otro"]],
     ["notes", "Notas", "textarea"]
   ],
@@ -359,11 +365,7 @@ function renderAll() {
 function renderDashboard() {
   const activeVehicles = state.vehicles.filter((v) => v.status === "activo").length;
   const alertItems = collectAlerts();
-  const income = sum(state.income);
-  const expenses = sum(state.expenses);
-  const balance = income - expenses;
-  const loans = loanSummary();
-  const cashAvailable = balance - loans.outstanding;
+  const finance = financeTotals();
   const greeting = greetingForTime();
 
   $("#dashboard-view").innerHTML = `
@@ -398,7 +400,7 @@ function renderDashboard() {
       ${premiumStatCard("Vehiculos", state.vehicles.length, `${activeVehicles} activos`, "car", "teal", "vehicles")}
       ${premiumStatCard("Conductores", state.drivers.length, "capturados", "user", "purple", "drivers")}
       ${premiumStatCard("Calendario", alertItems.length, "proximos eventos", "calendar", "blue", "services")}
-      ${premiumStatCard("Ingresos", money(income), "este mes", "money", "green", "finance")}
+      ${premiumStatCard("Ingresos", money(finance.rentas), "rentas cobradas", "money", "green", "finance")}
     </div>
 
     <section class="module-panel premium-actions-panel">
@@ -913,6 +915,101 @@ function loanRow(record) {
   `;
 }
 
+const financeBucketLabels = {
+  inversion: "Inversion",
+  renta: "Rentas",
+  otro_ingreso: "Otros ingresos",
+  activo: "Activos",
+  mantenimiento: "Mantenimiento",
+  otro_egreso: "Otros egresos"
+};
+
+function textForFinance(record) {
+  return [record.concept, record.category, record.notes, record.period].filter(Boolean).join(" ").toLowerCase();
+}
+
+function suggestedFinanceBucket(type, record) {
+  const text = textForFinance(record);
+  if (type === "income") {
+    if (/\b(inversion|inversi[oó]n|aportacion|aportaci[oó]n|capital|socio|inicial)\b/.test(text)) return "inversion";
+    if (/\b(renta|semanalidad|semana|pago|cobro|chofer)\b/.test(text)) return "renta";
+    return "renta";
+  }
+  if (type === "expenses") {
+    if (/\b(compra|vehiculo|vehiculo|auto|unidad|placa|placas|alta|inicial|gps inicial|seguro inicial|verificacion inicial|ponerlo a trabajar|poner a trabajar)\b/.test(text)) return "activo";
+    if (/\b(mantenimiento|servicio|refaccion|refacci[oó]n|llanta|llantas|aceite|freno|frenos|afinacion|afinaci[oó]n|reparacion|reparaci[oó]n|mano de obra|grua|gr[uú]a|taller)\b/.test(text)) return "mantenimiento";
+    if (record.category === "mantenimiento" || record.category === "refaccion") return "mantenimiento";
+    if (["GPS", "seguro"].includes(record.category) && /\b(inicial|alta|compra)\b/.test(text)) return "activo";
+    return "otro_egreso";
+  }
+  return "";
+}
+
+function financeBucket(type, record) {
+  return record.finance_bucket || suggestedFinanceBucket(type, record);
+}
+
+function financeBucketStatus(type, record) {
+  return record.classification_status || (record.finance_bucket ? "manual" : "auto");
+}
+
+function financeBucketName(bucket) {
+  return financeBucketLabels[bucket] || "En revision";
+}
+
+function financeRecords(type, bucket) {
+  return state[type].filter((record) => financeBucket(type, record) === bucket);
+}
+
+function financeTotals() {
+  const loans = loanSummary();
+  const inversion = sum(financeRecords("income", "inversion"));
+  const rentas = sum(financeRecords("income", "renta"));
+  const otrosIngresos = sum(financeRecords("income", "otro_ingreso"));
+  const activos = sum(financeRecords("expenses", "activo"));
+  const mantenimiento = sum(financeRecords("expenses", "mantenimiento"));
+  const otrosEgresos = sum(financeRecords("expenses", "otro_egreso"));
+  const liquidez = inversion + rentas + otrosIngresos + loans.recovered - activos - mantenimiento - otrosEgresos - loans.lent;
+  const utilidadOperativa = rentas + otrosIngresos - mantenimiento - otrosEgresos;
+  return { inversion, rentas, otrosIngresos, activos, mantenimiento, otrosEgresos, loans, liquidez, utilidadOperativa };
+}
+
+function financeModuleCard(title, value, detail, tone) {
+  return `
+    <article class="finance-module-card ${tone || ""}">
+      <p>${title}</p>
+      <strong>${value}</strong>
+      <small>${detail}</small>
+    </article>
+  `;
+}
+
+function financeMigrationRow(type, record) {
+  const bucket = financeBucket(type, record);
+  const status = financeBucketStatus(type, record);
+  return `
+    <button class="list-row migration-row" data-edit-type="${type}" data-id="${record.id}" type="button">
+      <span>
+        <strong>${record.concept || getTitle(type, record)}</strong>
+        <small>${record.vehicle_code || "Sin vehiculo"} - ${record.date || record.loan_date || "Sin fecha"}</small>
+      </span>
+      <span>
+        <b>${financeBucketName(bucket)}</b>
+        <em class="traffic ${status === "manual" ? "green" : status === "revision" ? "yellow" : "gray"}">${status === "manual" ? "Manual" : status === "revision" ? "Revision" : "Sugerido"}</em>
+      </span>
+    </button>
+  `;
+}
+
+function financeMigrationPreview() {
+  const records = [
+    ...state.income.map((record) => ({ type: "income", record })),
+    ...state.expenses.map((record) => ({ type: "expenses", record }))
+  ];
+  if (!records.length) return `<div class="empty-state">Aun no hay ingresos o egresos por clasificar.</div>`;
+  return records.map((item) => financeMigrationRow(item.type, item.record)).join("");
+}
+
 function vehicleFinanceRow(row) {
   return `
     <article class="vehicle-finance-row">
@@ -936,34 +1033,38 @@ function vehicleFinanceRow(row) {
 }
 
 function renderFinance() {
-  const income = sum(state.income);
-  const expenses = sum(state.expenses);
-  const balance = income - expenses;
+  const totals = financeTotals();
   const vehicleRows = getVehicleProfitability();
-  const loans = loanSummary();
-  const cashEstimate = balance - loans.outstanding;
   $("#finance-view").innerHTML = `
-    <div class="stats-grid finance-summary-grid">
-      ${statCard("Ingresos operativos", money(income), "Rentas y pagos")}
-      ${statCard("Egresos operativos", money(expenses), "Gastos reales")}
-      ${statCard("Utilidad operativa", money(balance), "Ingresos - egresos")}
-      ${statCard("Prestado", money(loans.lent), "Dinero entregado")}
-      ${statCard("Recuperado", money(loans.recovered), "Dinero devuelto")}
-      ${statCard("Por cobrar", money(loans.outstanding), "Saldo pendiente")}
-      ${statCard("Caja disponible estimada", money(cashEstimate), "Utilidad - por cobrar")}
-      ${statCard("Prestamos activos", loans.activeCount, "Pendientes/parciales")}
+    <section class="finance-hero-panel">
+      <div>
+        <p>Liquidez disponible</p>
+        <strong>${money(totals.liquidez)}</strong>
+        <small>Dinero realmente disponible, separado de activos y prestamos.</small>
+      </div>
+      <div class="finance-formula">
+        Inversion + rentas + recuperado - activos - prestamos - mantenimiento - otros egresos
+      </div>
+    </section>
+
+    <div class="finance-module-grid">
+      ${financeModuleCard("Inversion", money(totals.inversion), "Capital inicial y aportaciones", "green")}
+      ${financeModuleCard("Activos", money(totals.activos), "Vehiculos y gastos para iniciar", "gold")}
+      ${financeModuleCard("Rentas", money(totals.rentas), "Ingresos por renta", "green")}
+      ${financeModuleCard("Prestamos", money(totals.loans.outstanding), `${money(totals.loans.lent)} prestado`, "purple")}
+      ${financeModuleCard("Mantenimiento", money(totals.mantenimiento), "Gastos por coche trabajando", "red")}
+      ${financeModuleCard("Utilidad operativa", money(totals.utilidadOperativa), "No incluye compra de activos", "blue")}
     </div>
 
-    <section class="module-panel loan-summary-panel">
+    <section class="module-panel finance-review-panel">
       <div class="panel-header">
         <div>
-          <h3>Prestamos por cobrar</h3>
-          <p>Separados de la utilidad operativa, pero visibles en caja estimada.</p>
+          <h3>Reclasificacion sugerida</h3>
+          <p>Revisa los movimientos existentes. Si algo quedo mal, toca el registro y cambia el modulo financiero.</p>
         </div>
-        <button class="primary-btn" data-create="loans" type="button">Agregar prestamo</button>
       </div>
-      <div class="finance-list" data-grid="loans">
-        ${state.loans.map((record) => loanRow(record)).join("") || `<div class="empty-state">Sin prestamos registrados.</div>`}
+      <div class="finance-list">
+        ${financeMigrationPreview()}
       </div>
     </section>
 
@@ -971,7 +1072,7 @@ function renderFinance() {
       <div class="panel-header">
         <div>
           <h3>Balance por coche</h3>
-          <p>Utilidad operativa por coche y caja despues de prestamos pendientes.</p>
+          <p>Rentas, gastos y prestamos relacionados con cada unidad.</p>
         </div>
       </div>
       <div class="vehicle-finance-list">
@@ -980,8 +1081,23 @@ function renderFinance() {
     </section>
 
     <div class="dashboard-layout">
-      ${financePanel("income", "Ingresos", "Crear ingresos por vehiculo, chofer y periodo.")}
-      ${financePanel("expenses", "Egresos", "Registrar gastos por vehiculo y categoria.")}
+      ${financePanel("income", "Inversion", "Capital inicial y aportaciones posteriores.", "inversion")}
+      ${financePanel("income", "Rentas", "Ingresos cobrados por renta de vehiculos.", "renta")}
+      ${financePanel("expenses", "Activos", "Compra de vehiculos y gastos antes de operar.", "activo")}
+      ${financePanel("expenses", "Mantenimiento", "Servicios, refacciones y reparaciones por vehiculo.", "mantenimiento")}
+      ${financePanel("expenses", "Otros egresos", "Salidas de dinero que no son activos ni mantenimiento.", "otro_egreso")}
+      <section class="module-panel loan-summary-panel">
+        <div class="panel-header">
+          <div>
+            <h3>Prestamos</h3>
+            <p>Dinero prestado, recuperado y saldo por cobrar.</p>
+          </div>
+          <button class="primary-btn" data-create="loans" type="button">Agregar prestamo</button>
+        </div>
+        <div class="finance-list" data-grid="loans">
+          ${state.loans.map((record) => loanRow(record)).join("") || `<div class="empty-state">Sin prestamos registrados.</div>`}
+        </div>
+      </section>
     </div>
   `;
   bindModule("income");
@@ -989,7 +1105,9 @@ function renderFinance() {
   bindModule("loans");
 }
 
-function financePanel(type, title, subtitle) {
+function financePanel(type, title, subtitle, bucket = "") {
+  const records = bucket ? financeRecords(type, bucket) : state[type];
+  const createBucket = bucket ? ` data-finance-bucket="${bucket}"` : "";
   return `
     <section class="module-panel">
       <div class="panel-header">
@@ -997,17 +1115,19 @@ function financePanel(type, title, subtitle) {
           <h3>${title}</h3>
           <p>${subtitle}</p>
         </div>
-        <button class="primary-btn" data-create="${type}" type="button">Agregar</button>
+        <button class="primary-btn" data-create="${type}"${createBucket} type="button">Agregar</button>
       </div>
       <div class="finance-list" data-grid="${type}">
-        ${state[type].map((record) => financeRow(type, record)).join("") || `<div class="empty-state">Sin movimientos.</div>`}
+        ${records.map((record) => financeRow(type, record)).join("") || `<div class="empty-state">Sin movimientos.</div>`}
       </div>
     </section>
   `;
 }
 
 function bindModule(type) {
-  $$(`[data-create="${type}"]`).forEach((button) => button.addEventListener("click", () => openRecord(type)));
+  $$(`[data-create="${type}"]`).forEach((button) => button.addEventListener("click", () => openRecord(type, null, {
+    finance_bucket: button.dataset.financeBucket || ""
+  })));
   $$(`[data-edit-type="${type}"]`).forEach((button) => button.addEventListener("click", () => openRecord(type, button.dataset.id)));
   if (type === "vehicles") {
     $$("[data-profile-id]").forEach((button) => button.addEventListener("click", () => openVehicleProfile(button.dataset.profileId)));
@@ -1067,13 +1187,18 @@ function recordCard(type, record) {
 
 function financeRow(type, record) {
   const amount = Number(record.amount || 0);
+  const bucket = financeBucket(type, record);
+  const status = financeBucketStatus(type, record);
   return `
     <button class="list-row" data-edit-type="${type}" data-id="${record.id}" type="button">
       <span>
         <strong>${record.concept || "Movimiento"}</strong>
-        <small>${record.vehicle_code || "Sin vehiculo"} - ${record.date || "Sin fecha"}</small>
+        <small>${record.vehicle_code || "Sin vehiculo"} - ${record.date || "Sin fecha"} - ${financeBucketName(bucket)}</small>
       </span>
-      <span class="traffic ${type === "income" ? "green" : "red"}">${money(amount)}</span>
+      <span>
+        <b class="finance-amount ${type === "income" ? "positive" : "negative"}">${money(amount)}</b>
+        <em class="traffic ${status === "manual" ? "green" : status === "revision" ? "yellow" : "gray"}">${status === "manual" ? "Manual" : status === "revision" ? "Revision" : "Sugerido"}</em>
+      </span>
     </button>
   `;
 }
@@ -1131,10 +1256,17 @@ function bindDialog() {
   });
 }
 
-function openRecord(type, id = null) {
+function openRecord(type, id = null, defaults = {}) {
   activeRecordType = type;
   activeRecordId = id;
-  const record = id ? state[type].find((item) => item.id === id) : {};
+  const storedRecord = (id ? state[type].find((item) => item.id === id) : defaults) || {};
+  const record = ["income", "expenses"].includes(type)
+    ? {
+        ...storedRecord,
+        finance_bucket: storedRecord.finance_bucket || suggestedFinanceBucket(type, storedRecord),
+        classification_status: storedRecord.classification_status || "revision"
+      }
+    : storedRecord;
   $("#dialog-title").textContent = `${id ? "Editar" : "Nuevo"} ${labelForType(type)}`;
   $("#delete-record").classList.toggle("is-hidden", !id);
   $("#dialog-fields").innerHTML = fieldSets[type].map((field) => inputForField(field, record)).join("");
@@ -1161,6 +1293,10 @@ function applyRecordDefaults(type, record) {
   }
   if (type === "services") {
     record.status = record.status || "pendiente";
+  }
+  if (type === "income" || type === "expenses") {
+    record.finance_bucket = record.finance_bucket || suggestedFinanceBucket(type, record);
+    record.classification_status = "manual";
   }
 }
 
