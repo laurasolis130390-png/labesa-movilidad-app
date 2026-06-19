@@ -373,7 +373,7 @@ function renderDashboard() {
         <span>Inicio</span>
       </div>
       <button class="notification-visual-btn" type="button" aria-label="Alertas">${navIcon("bell")}</button>
-      <img class="intro-logo" src="assets/logo-labesa-oficial.jpeg" alt="LaBeSa Movilidad" />
+      <img class="intro-logo" src="assets/logo-labesa-clean.png" alt="LaBeSa Movilidad" />
     </section>
 
     <section class="alert-summary-card">
@@ -387,7 +387,7 @@ function renderDashboard() {
 
     <section class="hero-card premium-hero-card">
       <div class="hero-brand-column">
-        <img class="hero-logo" src="assets/logo-labesa-oficial.jpeg" alt="LaBeSa Movilidad" />
+        <img class="hero-logo" src="assets/logo-labesa-clean.png" alt="LaBeSa Movilidad" />
         <p>Acercamos personas y negocios.</p>
         <button class="primary-btn hero-action" data-view="vehicles" type="button">
           ${navIcon("car")} Ver mi flotilla ${navIcon("chevron")}
