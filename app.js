@@ -408,10 +408,10 @@ function renderDashboard() {
         </div>
       </div>
       <div class="quick-grid premium-actions-grid">
-        ${quickAction("Agregar vehiculo", "vehicles", "plus", "vehicles")}
-        ${quickAction("Nuevo conductor", "drivers", "user-plus", "drivers")}
-        ${quickAction("Nuevo evento", "services", "calendar", "services")}
-        ${quickAction("Registrar ingreso", "finance", "file", "income")}
+        ${quickAction("Agregar vehiculo", "vehicles", "plus", "vehicles", "teal")}
+        ${quickAction("Nuevo conductor", "drivers", "user-plus", "drivers", "purple")}
+        ${quickAction("Nuevo evento", "services", "calendar", "services", "blue")}
+        ${quickAction("Registrar ingreso", "finance", "file", "income", "green")}
       </div>
     </section>
 
@@ -443,10 +443,10 @@ function premiumStatCard(label, value, detail, icon, tone) {
   `;
 }
 
-function quickAction(label, view, icon, createType = "") {
+function quickAction(label, view, icon, createType = "", tone = "teal") {
   const createAttr = createType ? ` data-quick-create="${createType}"` : "";
   return `
-    <button class="quick-card premium-action-card" data-view="${view}"${createAttr} type="button">
+    <button class="quick-card premium-action-card tone-${tone}" data-view="${view}"${createAttr} type="button">
       <span>${navIcon(icon)}</span>
       ${label}
     </button>
