@@ -408,15 +408,20 @@ function renderDashboard() {
         </div>
       </div>
       <div class="quick-grid premium-actions-grid">
-        ${quickAction("Agregar vehiculo", "vehicles", "plus")}
-        ${quickAction("Nuevo conductor", "drivers", "user-plus")}
-        ${quickAction("Nuevo evento", "vehicles", "calendar")}
-        ${quickAction("Registrar ingreso", "finance", "file")}
+        ${quickAction("Agregar vehiculo", "vehicles", "plus", "vehicles")}
+        ${quickAction("Nuevo conductor", "drivers", "user-plus", "drivers")}
+        ${quickAction("Nuevo evento", "services", "calendar", "services")}
+        ${quickAction("Registrar ingreso", "finance", "file", "income")}
       </div>
     </section>
 
   `;
-  $$("#dashboard-view [data-view]").forEach((button) => button.addEventListener("click", () => switchView(button.dataset.view)));
+  $$("#dashboard-view [data-view]").forEach((button) =>
+    button.addEventListener("click", () => {
+      switchView(button.dataset.view);
+      if (button.dataset.quickCreate) openRecord(button.dataset.quickCreate);
+    })
+  );
 }
 
 function greetingForTime(date = new Date()) {
@@ -438,9 +443,10 @@ function premiumStatCard(label, value, detail, icon, tone) {
   `;
 }
 
-function quickAction(label, view, icon) {
+function quickAction(label, view, icon, createType = "") {
+  const createAttr = createType ? ` data-quick-create="${createType}"` : "";
   return `
-    <button class="quick-card premium-action-card" data-view="${view}" type="button">
+    <button class="quick-card premium-action-card" data-view="${view}"${createAttr} type="button">
       <span>${navIcon(icon)}</span>
       ${label}
     </button>

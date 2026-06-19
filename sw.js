@@ -1,4 +1,4 @@
-const CACHE_NAME = "labesa-movilidad-v13";
+const CACHE_NAME = "labesa-movilidad-v14";
 const APP_SHELL = [
   "/",
   "/index.html",
