@@ -394,10 +394,10 @@ function renderDashboard() {
     </div>
 
     <div class="stats-grid operational-grid premium-stats-grid">
-      ${premiumStatCard("Vehiculos", state.vehicles.length, `${activeVehicles} activos`, "car", "teal")}
-      ${premiumStatCard("Conductores", state.drivers.length, "capturados", "user", "purple")}
-      ${premiumStatCard("Calendario", alertItems.length, "proximos eventos", "calendar", "blue")}
-      ${premiumStatCard("Ingresos", money(income), "este mes", "money", "green")}
+      ${premiumStatCard("Vehiculos", state.vehicles.length, `${activeVehicles} activos`, "car", "teal", "vehicles")}
+      ${premiumStatCard("Conductores", state.drivers.length, "capturados", "user", "purple", "drivers")}
+      ${premiumStatCard("Calendario", alertItems.length, "proximos eventos", "calendar", "blue", "services")}
+      ${premiumStatCard("Ingresos", money(income), "este mes", "money", "green", "finance")}
     </div>
 
     <section class="module-panel premium-actions-panel">
@@ -431,15 +431,16 @@ function greetingForTime(date = new Date()) {
   return "¡Buenas noches!";
 }
 
-function premiumStatCard(label, value, detail, icon, tone) {
+function premiumStatCard(label, value, detail, icon, tone, view = "") {
+  const viewAttr = view ? ` data-view="${view}"` : "";
   return `
-    <article class="stat-card premium-stat-card tone-${tone}">
+    <button class="stat-card premium-stat-card tone-${tone}"${viewAttr} type="button">
       <span class="premium-stat-icon">${navIcon(icon)}</span>
       <p>${label}</p>
       <strong>${value}</strong>
       <small>${detail}</small>
       <span class="stat-sparkline" aria-hidden="true"></span>
-    </article>
+    </button>
   `;
 }
 

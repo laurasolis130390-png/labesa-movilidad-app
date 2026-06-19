@@ -812,6 +812,14 @@ textarea:focus {
   background:
     radial-gradient(circle at 85% 78%, rgba(37, 215, 199, 0.15), transparent 34%),
     linear-gradient(135deg, rgba(8, 47, 82, 0.96), rgba(0, 22, 47, 0.96));
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.premium-stat-card:active {
+  transform: scale(0.985);
 }
 
 .premium-stat-card::after {
