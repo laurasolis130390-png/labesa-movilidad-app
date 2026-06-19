@@ -331,6 +331,7 @@ function navIcon(name) {
     "user-plus": `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-7 2.1-7 5v1h12v-1c0-1.5.7-2.9 1.8-3.8A12.5 12.5 0 0 0 9 14zm10-1v3h3v2h-3v3h-2v-3h-3v-2h3v-3z"/></svg>`,
     plus: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/></svg>`,
     calendar: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h2v3h6V2h2v3h3v16H4V5h3zm11 8H6v9h12z"/></svg>`,
+    edit: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.2V20h2.8L17.7 9.1l-2.8-2.8zm15.8-10L18.7 8.3l-2.8-2.8 1.1-1.1a1.3 1.3 0 0 1 1.8 0l1 1a1.3 1.3 0 0 1 0 1.8z"/></svg>`,
     menu: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>`
   };
   return icons[name] || name;
@@ -469,6 +470,10 @@ function alertTicker(alertItems) {
 }
 
 function renderModule(type, title, subtitle) {
+  if (type === "vehicles") {
+    renderVehiclesModule(title, subtitle);
+    return;
+  }
   if (type === "gps") {
     renderGpsModule(title, subtitle);
     return;
@@ -505,6 +510,49 @@ function renderModule(type, title, subtitle) {
     </section>
   `;
   bindModule(type);
+}
+
+function renderVehiclesModule(title, subtitle) {
+  const records = state.vehicles || [];
+  const view = $("#vehicles-view");
+  view.innerHTML = `
+    <section class="vehicles-clean-view">
+      <header class="clean-view-header">
+        <div>
+          <h2>Vehiculos</h2>
+          <p>Administra y consulta cada unidad registrada.</p>
+        </div>
+        <button class="primary-btn compact-add-btn" data-create="vehicles" type="button">Agregar</button>
+      </header>
+
+      <div class="vehicles-clean-list" data-grid="vehicles">
+        ${records.map(vehicleCleanCard).join("") || `<div class="empty-state">No hay vehiculos todavia.</div>`}
+      </div>
+    </section>
+  `;
+  bindModule("vehicles");
+}
+
+function vehicleCleanCard(record) {
+  const status = statusForRecord("vehicles", record);
+  const title = `${record.internal_code || "Unidad"} - ${[record.brand, record.model, record.year].filter(Boolean).join(" ")}`.trim();
+  const image = record.photo_url;
+  const driver = record.driver_name || "Sin chofer asignado";
+  return `
+    <article class="vehicle-clean-card">
+      <div class="vehicle-clean-photo">${image ? `<img src="${escapeAttr(image)}" alt="${escapeAttr(title)}" />` : initials(title)}</div>
+      <div class="vehicle-clean-body">
+        <h3>${escapeHtml(title)}</h3>
+        <p><strong>Chofer:</strong> ${escapeHtml(driver)}</p>
+        <div class="vehicle-clean-actions">
+          <span class="traffic ${status.key}">${status.label}</span>
+          <span class="badge">${escapeHtml(record.status || "Registro")}</span>
+          <button class="small-btn" data-profile-id="${record.id}" type="button">${navIcon("file")} Ficha</button>
+          <button class="small-btn" data-edit-type="vehicles" data-id="${record.id}" type="button">${navIcon("edit")} Editar</button>
+        </div>
+      </div>
+    </article>
+  `;
 }
 
 function renderServicesModule(title, subtitle) {

@@ -3971,3 +3971,152 @@ textarea:focus {
     height: 18px !important;
   }
 }
+
+/* Clean mobile Vehicles view */
+.vehicles-clean-view {
+  display: grid;
+  gap: 14px;
+}
+
+.clean-view-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.clean-view-header h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1.45rem;
+  line-height: 1.05;
+}
+
+.clean-view-header p {
+  margin: 7px 0 0;
+  color: #8fb9cf;
+  font-size: 0.82rem;
+}
+
+.compact-add-btn {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.vehicles-clean-list {
+  display: grid;
+  gap: 12px;
+}
+
+.vehicle-clean-card {
+  overflow: hidden;
+  border: 1px solid rgba(31, 214, 202, 0.25);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 88% 10%, rgba(31, 214, 202, 0.18), transparent 34%),
+    linear-gradient(145deg, rgba(7, 55, 90, 0.96), rgba(0, 32, 67, 0.98));
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.22);
+}
+
+.vehicle-clean-photo {
+  height: 138px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: #ffffff;
+  background: linear-gradient(135deg, #05213c, #074f74);
+  font-size: 2rem;
+  font-weight: 900;
+}
+
+.vehicle-clean-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vehicle-clean-body {
+  padding: 12px 12px 14px;
+}
+
+.vehicle-clean-body h3 {
+  margin: 0 0 5px;
+  color: #ffffff;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.vehicle-clean-body p {
+  margin: 0 0 10px;
+  color: #9dd8e4;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.vehicle-clean-body p strong {
+  color: #25d7c7;
+}
+
+.vehicle-clean-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vehicle-clean-actions .traffic,
+.vehicle-clean-actions .badge {
+  min-height: 30px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+}
+
+.vehicle-clean-actions .small-btn {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-radius: 9px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #1fd6ca, #0aa8b8);
+}
+
+.vehicle-clean-actions .small-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+@media (max-width: 820px) {
+  .app-shell[data-active-view="vehicles"] .topbar {
+    display: none;
+  }
+
+  .app-shell[data-active-view="vehicles"] .workspace {
+    padding-top: 18px;
+    padding-bottom: 92px;
+    background: var(--brand-deep);
+  }
+
+  .app-shell[data-active-view="vehicles"] .vehicles-clean-view {
+    padding-top: 2px;
+  }
+}
+
+@media (max-width: 380px) {
+  .vehicle-clean-photo {
+    height: 126px;
+  }
+
+  .vehicle-clean-actions {
+    gap: 6px;
+  }
+
+  .vehicle-clean-actions .small-btn {
+    padding: 0 10px;
+  }
+}
