@@ -367,13 +367,11 @@ function renderDashboard() {
 
   $("#dashboard-view").innerHTML = `
     <section class="dashboard-intro">
-      <button class="menu-visual-btn" type="button" aria-label="Menu">${navIcon("menu")}</button>
       <div class="intro-copy">
         <p>${greeting} 👋</p>
         <h3>LaBeSa Movilidad</h3>
         <span>Inicio</span>
       </div>
-      <button class="notification-visual-btn" type="button" aria-label="Alertas">${navIcon("bell")}</button>
       <img class="intro-logo" src="assets/logo-labesa-app.png" alt="LaBeSa Movilidad" />
     </section>
 
@@ -387,21 +385,7 @@ function renderDashboard() {
     </section>
 
     <section class="fleet-hero-card">
-      <div class="fleet-hero-brand">
-        <img class="fleet-hero-logo" src="assets/logo-labesa-app.png" alt="LaBeSa Movilidad" />
-        <p>Acercamos personas y negocios.</p>
-      </div>
-      <div class="fleet-hero-copy">
-        <h3>LaBeSa Movilidad</h3>
-        <p>Acercamos personas y negocios.</p>
-        <span class="fleet-status-pill">Excelente</span>
-      </div>
-      <div class="fleet-car-stage">
-        <img class="fleet-car-image" src="assets/hyundai-i10-photo.png" alt="Hyundai i10" />
-      </div>
-      <button class="fleet-hero-button" data-view="vehicles" type="button">
-        ${navIcon("car")} Ver mi flotilla ${navIcon("chevron")}
-      </button>
+      <button class="fleet-hero-button" data-view="vehicles" type="button" aria-label="Ver mi flotilla"></button>
     </section>
 
     <div class="section-title-row premium-section-title">

@@ -1,4 +1,4 @@
-const CACHE_NAME = "labesa-movilidad-v11";
+const CACHE_NAME = "labesa-movilidad-v12";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -8,6 +8,7 @@ const APP_SHELL = [
   "/assets/logo-labesa-app.png",
   "/assets/hyundai-i10.svg",
   "/assets/hyundai-i10-photo.png",
+  "/assets/dashboard-fleet-card.png",
   "/assets/dashboard-hero-reference.png"
 ];
 
