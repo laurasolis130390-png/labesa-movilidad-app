@@ -3130,3 +3130,221 @@ textarea:focus {
     width: calc(100% - 40px) !important;
   }
 }
+
+/* Final mobile dashboard tuning */
+@media (max-width: 820px) {
+  .app-shell[data-active-view="dashboard"] #dashboard-view.active-view {
+    gap: 18px !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .dashboard-intro {
+    grid-template-columns: 42px minmax(0, 1fr) 42px 58px !important;
+    gap: 10px !important;
+    align-items: center !important;
+    margin-bottom: 14px !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .menu-visual-btn,
+  .app-shell[data-active-view="dashboard"] .notification-visual-btn {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 12px !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .intro-copy p {
+    margin: 0 0 2px !important;
+    font-size: 0.74rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .intro-copy h3 {
+    font-size: clamp(1.2rem, 6vw, 1.78rem) !important;
+    line-height: 1.05 !important;
+    white-space: nowrap !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .intro-copy span {
+    margin-top: 2px !important;
+    font-size: 0.8rem !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .intro-logo {
+    width: 58px !important;
+    height: 58px !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .alert-summary-card {
+    grid-template-columns: 46px minmax(0, 1fr) auto !important;
+    gap: 12px !important;
+    padding: 14px !important;
+    border-radius: 16px !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .alert-summary-icon {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .alert-summary-card h3 {
+    font-size: 0.9rem !important;
+    margin-bottom: 3px !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .alert-summary-card p {
+    font-size: 0.74rem !important;
+    line-height: 1.25 !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .alert-summary-action {
+    grid-column: auto !important;
+    min-height: 36px !important;
+    padding: 0 13px !important;
+    border-radius: 999px !important;
+    font-size: 0.72rem !important;
+    white-space: nowrap !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .premium-hero-card {
+    display: grid !important;
+    grid-template-columns: 78px minmax(0, 1fr) !important;
+    grid-template-rows: auto 1fr auto !important;
+    min-height: 240px !important;
+    height: auto !important;
+    padding: 18px !important;
+    gap: 10px 14px !important;
+    border-radius: 18px !important;
+    overflow: hidden !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .premium-hero-card .hero-brand-column {
+    position: relative !important;
+    grid-column: 1 / 2 !important;
+    grid-row: 1 / 2 !important;
+    display: block !important;
+    padding: 0 !important;
+    z-index: 3 !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .premium-hero-card .hero-brand-column p {
+    display: none !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .premium-hero-card .hero-logo {
+    width: 62px !important;
+    height: 62px !important;
+    box-shadow: 0 0 0 4px rgba(31, 214, 202, 0.14) !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .premium-hero-card .hero-copy {
+    grid-column: 2 / 3 !important;
+    grid-row: 1 / 2 !important;
+    align-self: center !important;
+    padding: 0 !important;
+    z-index: 4 !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .premium-hero-card .hero-copy h3 {
+    font-size: clamp(1.28rem, 5.5vw, 1.75rem) !important;
+    line-height: 1.04 !important;
+    margin: 0 0 5px !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .premium-hero-card .hero-copy p {
+    font-size: 0.78rem !important;
+    line-height: 1.22 !important;
+    margin: 0 0 8px !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .status-pill {
+    min-height: 25px !important;
+    padding: 4px 10px !important;
+    font-size: 0.72rem !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .hero-car-stage {
+    position: absolute !important;
+    right: -10px !important;
+    bottom: 34px !important;
+    width: 55% !important;
+    min-height: 0 !important;
+    z-index: 2 !important;
+    pointer-events: none !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .hero-car-image {
+    width: 100% !important;
+    max-width: 220px !important;
+    height: auto !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .premium-hero-card .hero-action {
+    position: absolute !important;
+    left: 18px !important;
+    bottom: 18px !important;
+    width: min(158px, 48%) !important;
+    min-height: 46px !important;
+    padding: 0 12px !important;
+    border-radius: 12px !important;
+    display: inline-flex !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    z-index: 6 !important;
+    font-size: 0.78rem !important;
+    white-space: nowrap !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .premium-section-title {
+    margin-top: 4px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .app-shell[data-active-view="dashboard"] .dashboard-intro {
+    grid-template-columns: 38px minmax(0, 1fr) 38px 52px !important;
+    gap: 8px !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .menu-visual-btn,
+  .app-shell[data-active-view="dashboard"] .notification-visual-btn {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .intro-copy h3 {
+    font-size: 1.24rem !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .intro-logo {
+    width: 52px !important;
+    height: 52px !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .alert-summary-card {
+    grid-template-columns: 40px minmax(0, 1fr) !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .alert-summary-action {
+    grid-column: 1 / -1 !important;
+    justify-self: start !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .premium-hero-card {
+    min-height: 230px !important;
+    padding: 16px !important;
+    grid-template-columns: 64px minmax(0, 1fr) !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .premium-hero-card .hero-logo {
+    width: 54px !important;
+    height: 54px !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .hero-car-stage {
+    right: -16px !important;
+    width: 58% !important;
+  }
+
+  .app-shell[data-active-view="dashboard"] .premium-hero-card .hero-action {
+    width: 146px !important;
+  }
+}

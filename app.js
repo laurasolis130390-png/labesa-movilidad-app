@@ -363,12 +363,13 @@ function renderDashboard() {
   const balance = income - expenses;
   const loans = loanSummary();
   const cashAvailable = balance - loans.outstanding;
+  const greeting = greetingForTime();
 
   $("#dashboard-view").innerHTML = `
     <section class="dashboard-intro">
       <button class="menu-visual-btn" type="button" aria-label="Menu">${navIcon("menu")}</button>
       <div class="intro-copy">
-        <p>¡Buenas noches! 👋</p>
+        <p>${greeting} 👋</p>
         <h3>LaBeSa Movilidad</h3>
         <span>Inicio</span>
       </div>
@@ -389,9 +390,6 @@ function renderDashboard() {
       <div class="hero-brand-column">
         <img class="hero-logo" src="assets/logo-labesa-app.png" alt="LaBeSa Movilidad" />
         <p>Acercamos personas y negocios.</p>
-        <button class="primary-btn hero-action" data-view="vehicles" type="button">
-          ${navIcon("car")} Ver mi flotilla ${navIcon("chevron")}
-        </button>
       </div>
       <div class="hero-copy">
         <h3>LaBeSa Movilidad</h3>
@@ -401,6 +399,9 @@ function renderDashboard() {
       <div class="hero-car-stage">
         <img class="hero-car-image" src="assets/hyundai-i10-photo.png" alt="Hyundai i10" />
       </div>
+      <button class="primary-btn hero-action" data-view="vehicles" type="button">
+        ${navIcon("car")} Ver mi flotilla ${navIcon("chevron")}
+      </button>
     </section>
 
     <div class="section-title-row premium-section-title">
@@ -432,6 +433,13 @@ function renderDashboard() {
 
   `;
   $$("#dashboard-view [data-view]").forEach((button) => button.addEventListener("click", () => switchView(button.dataset.view)));
+}
+
+function greetingForTime(date = new Date()) {
+  const hour = date.getHours();
+  if (hour < 12) return "¡Buenos dias!";
+  if (hour < 19) return "¡Buenas tardes!";
+  return "¡Buenas noches!";
 }
 
 function premiumStatCard(label, value, detail, icon, tone) {
