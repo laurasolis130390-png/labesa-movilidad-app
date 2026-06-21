@@ -51,7 +51,7 @@ const fieldSets = {
     ["photo_url", "Foto del coche (URL publica)", "url"],
     ["__file_photo_url", "Subir foto del coche", "file", "vehicle-photos", "photo_url"],
     ["circulation_card_photo_url", "Subir foto de tarjeta de circulacion", "file", "vehicle-documents", "circulation_card_photo_url"],
-    ["insurance_policy_photo_url", "Subir foto de poliza de seguro", "file", "vehicle-documents", "insurance_policy_photo_url"],
+    ["__file_insurance_policy_photo_url", "Subir PDF de poliza de seguro", "file", "vehicle-documents", "insurance_policy_photo_url", ".pdf,application/pdf"],
     ["verification_sticker", "Engomado", "sticker-select"],
     ["first_verification_due", "Verificacion primer semestre", "date"],
     ["first_verification_status", "Estatus primer semestre", "select", ["pendiente", "verificado"]],
@@ -124,6 +124,9 @@ const fieldSets = {
     ["vehicle_code", "Vehiculo", "vehicle-select"],
     ["driver_name", "Chofer", "text"],
     ["concept", "Concepto", "text"],
+    ["finance_bucket", "Modulo financiero", "select", ["renta", "inversion", "otro_ingreso"]],
+    ["finance_subcategory", "Subcategoria", "text"],
+    ["classification_status", "Clasificacion", "select", ["auto", "manual", "revision"]],
     ["date", "Fecha", "date"],
     ["amount", "Monto", "number"],
     ["payment_method", "Metodo de pago", "text"],
@@ -135,6 +138,9 @@ const fieldSets = {
     ["concept", "Concepto", "text"],
     ["date", "Fecha", "date"],
     ["amount", "Monto", "number"],
+    ["finance_bucket", "Modulo financiero", "select", ["mantenimiento", "activo", "otro_egreso"]],
+    ["finance_subcategory", "Subcategoria", "text"],
+    ["classification_status", "Clasificacion", "select", ["auto", "manual", "revision"]],
     ["category", "Categoria", "select", ["gasolina", "mantenimiento", "GPS", "seguro", "refaccion", "multa", "otro"]],
     ["notes", "Notas", "textarea"]
   ],
@@ -331,6 +337,7 @@ function navIcon(name) {
     "user-plus": `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-7 2.1-7 5v1h12v-1c0-1.5.7-2.9 1.8-3.8A12.5 12.5 0 0 0 9 14zm10-1v3h3v2h-3v3h-2v-3h-3v-2h3v-3z"/></svg>`,
     plus: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/></svg>`,
     calendar: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h2v3h6V2h2v3h3v16H4V5h3zm11 8H6v9h12z"/></svg>`,
+    edit: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.2V20h2.8L17.7 9.1l-2.8-2.8zm15.8-10L18.7 8.3l-2.8-2.8 1.1-1.1a1.3 1.3 0 0 1 1.8 0l1 1a1.3 1.3 0 0 1 0 1.8z"/></svg>`,
     menu: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>`
   };
   return icons[name] || name;
@@ -358,22 +365,17 @@ function renderAll() {
 function renderDashboard() {
   const activeVehicles = state.vehicles.filter((v) => v.status === "activo").length;
   const alertItems = collectAlerts();
-  const income = sum(state.income);
-  const expenses = sum(state.expenses);
-  const balance = income - expenses;
-  const loans = loanSummary();
-  const cashAvailable = balance - loans.outstanding;
+  const finance = financeTotals();
+  const greeting = greetingForTime();
 
   $("#dashboard-view").innerHTML = `
     <section class="dashboard-intro">
-      <button class="menu-visual-btn" type="button" aria-label="Menu">${navIcon("menu")}</button>
       <div class="intro-copy">
-        <p>¡Buenas noches! 👋</p>
+        <p>${greeting} 👋</p>
         <h3>LaBeSa Movilidad</h3>
         <span>Inicio</span>
       </div>
-      <button class="notification-visual-btn" type="button" aria-label="Alertas">${navIcon("bell")}</button>
-      <img class="intro-logo" src="assets/logo-labesa-oficial.jpeg" alt="LaBeSa Movilidad" />
+      <img class="intro-logo" src="assets/logo-labesa-app.png" alt="LaBeSa Movilidad" />
     </section>
 
     <section class="alert-summary-card">
@@ -385,27 +387,8 @@ function renderDashboard() {
       <button class="ghost-btn alert-summary-action" data-view="vehicles" type="button">Ver alertas ${navIcon("chevron")}</button>
     </section>
 
-    <section class="hero-card premium-hero-card">
-      <div class="hero-brand-column">
-        <img class="hero-logo" src="assets/logo-labesa-oficial.jpeg" alt="LaBeSa Movilidad" />
-        <p>Acercamos personas y negocios.</p>
-        <button class="primary-btn hero-action" data-view="vehicles" type="button">
-          ${navIcon("car")} Ver mi flotilla ${navIcon("chevron")}
-        </button>
-      </div>
-      <div class="hero-copy">
-        <h3>LaBeSa Movilidad</h3>
-        <p>Acercamos personas y negocios.</p>
-        <span class="status-pill">Excelente</span>
-      </div>
-      <div class="hero-car-stage">
-        <img class="hero-car-image" src="assets/hyundai-i10-photo.png" alt="Hyundai i10" />
-      </div>
-      <div class="hero-lines">
-        <span>${navIcon("settings")} Version operativa<br><b>v8</b></span>
-        <span>${navIcon("money")} Finanzas<br><b>editables</b></span>
-        <span>${navIcon("shield")} Datos seguros<br><b>y respaldados</b></span>
-      </div>
+    <section class="fleet-hero-card">
+      <button class="fleet-hero-button" data-view="vehicles" type="button" aria-label="Ver mi flotilla"></button>
     </section>
 
     <div class="section-title-row premium-section-title">
@@ -414,10 +397,10 @@ function renderDashboard() {
     </div>
 
     <div class="stats-grid operational-grid premium-stats-grid">
-      ${premiumStatCard("Vehiculos", state.vehicles.length, `${activeVehicles} activos`, "car", "teal")}
-      ${premiumStatCard("Conductores", state.drivers.length, "capturados", "user", "purple")}
-      ${premiumStatCard("Calendario", alertItems.length, "proximos eventos", "calendar", "blue")}
-      ${premiumStatCard("Ingresos", money(income), "este mes", "money", "green")}
+      ${premiumStatCard("Vehiculos", state.vehicles.length, `${activeVehicles} activos`, "car", "teal", "vehicles")}
+      ${premiumStatCard("Conductores", state.drivers.length, "capturados", "user", "purple", "drivers")}
+      ${premiumStatCard("Calendario", alertItems.length, "proximos eventos", "calendar", "blue", "services")}
+      ${premiumStatCard("Ingresos", money(finance.rentas), "rentas cobradas", "money", "green", "finance")}
     </div>
 
     <section class="module-panel premium-actions-panel">
@@ -428,32 +411,46 @@ function renderDashboard() {
         </div>
       </div>
       <div class="quick-grid premium-actions-grid">
-        ${quickAction("Agregar vehiculo", "vehicles", "plus")}
-        ${quickAction("Nuevo conductor", "drivers", "user-plus")}
-        ${quickAction("Nuevo evento", "vehicles", "calendar")}
-        ${quickAction("Registrar ingreso", "finance", "file")}
+        ${quickAction("Agregar vehiculo", "vehicles", "plus", "vehicles", "teal")}
+        ${quickAction("Nuevo conductor", "drivers", "user-plus", "drivers", "purple")}
+        ${quickAction("Nuevo evento", "services", "calendar", "services", "blue")}
+        ${quickAction("Registrar ingreso", "finance", "file", "income", "green")}
       </div>
     </section>
 
   `;
-  $$("#dashboard-view [data-view]").forEach((button) => button.addEventListener("click", () => switchView(button.dataset.view)));
+  $$("#dashboard-view [data-view]").forEach((button) =>
+    button.addEventListener("click", () => {
+      switchView(button.dataset.view);
+      if (button.dataset.quickCreate) openRecord(button.dataset.quickCreate);
+    })
+  );
 }
 
-function premiumStatCard(label, value, detail, icon, tone) {
+function greetingForTime(date = new Date()) {
+  const hour = date.getHours();
+  if (hour < 12) return "¡Buenos dias!";
+  if (hour < 19) return "¡Buenas tardes!";
+  return "¡Buenas noches!";
+}
+
+function premiumStatCard(label, value, detail, icon, tone, view = "") {
+  const viewAttr = view ? ` data-view="${view}"` : "";
   return `
-    <article class="stat-card premium-stat-card tone-${tone}">
+    <button class="stat-card premium-stat-card tone-${tone}"${viewAttr} type="button">
       <span class="premium-stat-icon">${navIcon(icon)}</span>
       <p>${label}</p>
       <strong>${value}</strong>
       <small>${detail}</small>
       <span class="stat-sparkline" aria-hidden="true"></span>
-    </article>
+    </button>
   `;
 }
 
-function quickAction(label, view, icon) {
+function quickAction(label, view, icon, createType = "", tone = "teal") {
+  const createAttr = createType ? ` data-quick-create="${createType}"` : "";
   return `
-    <button class="quick-card premium-action-card" data-view="${view}" type="button">
+    <button class="quick-card premium-action-card tone-${tone}" data-view="${view}"${createAttr} type="button">
       <span>${navIcon(icon)}</span>
       ${label}
     </button>
@@ -475,6 +472,10 @@ function alertTicker(alertItems) {
 }
 
 function renderModule(type, title, subtitle) {
+  if (type === "vehicles") {
+    renderVehiclesModule(title, subtitle);
+    return;
+  }
   if (type === "gps") {
     renderGpsModule(title, subtitle);
     return;
@@ -511,6 +512,49 @@ function renderModule(type, title, subtitle) {
     </section>
   `;
   bindModule(type);
+}
+
+function renderVehiclesModule(title, subtitle) {
+  const records = state.vehicles || [];
+  const view = $("#vehicles-view");
+  view.innerHTML = `
+    <section class="vehicles-clean-view">
+      <header class="clean-view-header">
+        <div>
+          <h2>Vehiculos</h2>
+          <p>Administra y consulta cada unidad registrada.</p>
+        </div>
+        <button class="primary-btn compact-add-btn" data-create="vehicles" type="button">Agregar</button>
+      </header>
+
+      <div class="vehicles-clean-list" data-grid="vehicles">
+        ${records.map(vehicleCleanCard).join("") || `<div class="empty-state">No hay vehiculos todavia.</div>`}
+      </div>
+    </section>
+  `;
+  bindModule("vehicles");
+}
+
+function vehicleCleanCard(record) {
+  const status = statusForRecord("vehicles", record);
+  const title = `${record.internal_code || "Unidad"} - ${[record.brand, record.model, record.year].filter(Boolean).join(" ")}`.trim();
+  const image = record.photo_url;
+  const driver = record.driver_name || "Sin chofer asignado";
+  return `
+    <article class="vehicle-clean-card">
+      <div class="vehicle-clean-photo">${image ? `<img src="${escapeAttr(image)}" alt="${escapeAttr(title)}" />` : initials(title)}</div>
+      <div class="vehicle-clean-body">
+        <h3>${escapeHtml(title)}</h3>
+        <p><strong>Chofer:</strong> ${escapeHtml(driver)}</p>
+        <div class="vehicle-clean-actions">
+          <span class="traffic ${status.key}">${status.label}</span>
+          <span class="badge">${escapeHtml(record.status || "Registro")}</span>
+          <button class="small-btn" data-profile-id="${record.id}" type="button">${navIcon("file")} Ficha</button>
+          <button class="small-btn" data-edit-type="vehicles" data-id="${record.id}" type="button">${navIcon("edit")} Editar</button>
+        </div>
+      </div>
+    </article>
+  `;
 }
 
 function renderServicesModule(title, subtitle) {
@@ -871,6 +915,101 @@ function loanRow(record) {
   `;
 }
 
+const financeBucketLabels = {
+  inversion: "Inversion",
+  renta: "Rentas",
+  otro_ingreso: "Otros ingresos",
+  activo: "Activos",
+  mantenimiento: "Mantenimiento",
+  otro_egreso: "Otros egresos"
+};
+
+function textForFinance(record) {
+  return [record.concept, record.category, record.notes, record.period].filter(Boolean).join(" ").toLowerCase();
+}
+
+function suggestedFinanceBucket(type, record) {
+  const text = textForFinance(record);
+  if (type === "income") {
+    if (/\b(inversion|inversi[oó]n|aportacion|aportaci[oó]n|capital|socio|inicial)\b/.test(text)) return "inversion";
+    if (/\b(renta|semanalidad|semana|pago|cobro|chofer)\b/.test(text)) return "renta";
+    return "renta";
+  }
+  if (type === "expenses") {
+    if (/\b(compra|vehiculo|vehiculo|auto|unidad|placa|placas|alta|inicial|gps inicial|seguro inicial|verificacion inicial|ponerlo a trabajar|poner a trabajar)\b/.test(text)) return "activo";
+    if (/\b(mantenimiento|servicio|refaccion|refacci[oó]n|llanta|llantas|aceite|freno|frenos|afinacion|afinaci[oó]n|reparacion|reparaci[oó]n|mano de obra|grua|gr[uú]a|taller)\b/.test(text)) return "mantenimiento";
+    if (record.category === "mantenimiento" || record.category === "refaccion") return "mantenimiento";
+    if (["GPS", "seguro"].includes(record.category) && /\b(inicial|alta|compra)\b/.test(text)) return "activo";
+    return "otro_egreso";
+  }
+  return "";
+}
+
+function financeBucket(type, record) {
+  return record.finance_bucket || suggestedFinanceBucket(type, record);
+}
+
+function financeBucketStatus(type, record) {
+  return record.classification_status || (record.finance_bucket ? "manual" : "auto");
+}
+
+function financeBucketName(bucket) {
+  return financeBucketLabels[bucket] || "En revision";
+}
+
+function financeRecords(type, bucket) {
+  return state[type].filter((record) => financeBucket(type, record) === bucket);
+}
+
+function financeTotals() {
+  const loans = loanSummary();
+  const inversion = sum(financeRecords("income", "inversion"));
+  const rentas = sum(financeRecords("income", "renta"));
+  const otrosIngresos = sum(financeRecords("income", "otro_ingreso"));
+  const activos = sum(financeRecords("expenses", "activo"));
+  const mantenimiento = sum(financeRecords("expenses", "mantenimiento"));
+  const otrosEgresos = sum(financeRecords("expenses", "otro_egreso"));
+  const liquidez = inversion + rentas + otrosIngresos + loans.recovered - activos - mantenimiento - otrosEgresos - loans.lent;
+  const utilidadOperativa = rentas + otrosIngresos - mantenimiento - otrosEgresos;
+  return { inversion, rentas, otrosIngresos, activos, mantenimiento, otrosEgresos, loans, liquidez, utilidadOperativa };
+}
+
+function financeModuleCard(title, value, detail, tone) {
+  return `
+    <article class="finance-module-card ${tone || ""}">
+      <p>${title}</p>
+      <strong>${value}</strong>
+      <small>${detail}</small>
+    </article>
+  `;
+}
+
+function financeMigrationRow(type, record) {
+  const bucket = financeBucket(type, record);
+  const status = financeBucketStatus(type, record);
+  return `
+    <button class="list-row migration-row" data-edit-type="${type}" data-id="${record.id}" type="button">
+      <span>
+        <strong>${record.concept || getTitle(type, record)}</strong>
+        <small>${record.vehicle_code || "Sin vehiculo"} - ${record.date || record.loan_date || "Sin fecha"}</small>
+      </span>
+      <span>
+        <b>${financeBucketName(bucket)}</b>
+        <em class="traffic ${status === "manual" ? "green" : status === "revision" ? "yellow" : "gray"}">${status === "manual" ? "Manual" : status === "revision" ? "Revision" : "Sugerido"}</em>
+      </span>
+    </button>
+  `;
+}
+
+function financeMigrationPreview() {
+  const records = [
+    ...state.income.map((record) => ({ type: "income", record })),
+    ...state.expenses.map((record) => ({ type: "expenses", record }))
+  ];
+  if (!records.length) return `<div class="empty-state">Aun no hay ingresos o egresos por clasificar.</div>`;
+  return records.map((item) => financeMigrationRow(item.type, item.record)).join("");
+}
+
 function vehicleFinanceRow(row) {
   return `
     <article class="vehicle-finance-row">
@@ -894,34 +1033,38 @@ function vehicleFinanceRow(row) {
 }
 
 function renderFinance() {
-  const income = sum(state.income);
-  const expenses = sum(state.expenses);
-  const balance = income - expenses;
+  const totals = financeTotals();
   const vehicleRows = getVehicleProfitability();
-  const loans = loanSummary();
-  const cashEstimate = balance - loans.outstanding;
   $("#finance-view").innerHTML = `
-    <div class="stats-grid finance-summary-grid">
-      ${statCard("Ingresos operativos", money(income), "Rentas y pagos")}
-      ${statCard("Egresos operativos", money(expenses), "Gastos reales")}
-      ${statCard("Utilidad operativa", money(balance), "Ingresos - egresos")}
-      ${statCard("Prestado", money(loans.lent), "Dinero entregado")}
-      ${statCard("Recuperado", money(loans.recovered), "Dinero devuelto")}
-      ${statCard("Por cobrar", money(loans.outstanding), "Saldo pendiente")}
-      ${statCard("Caja disponible estimada", money(cashEstimate), "Utilidad - por cobrar")}
-      ${statCard("Prestamos activos", loans.activeCount, "Pendientes/parciales")}
+    <section class="finance-hero-panel">
+      <div>
+        <p>Liquidez disponible</p>
+        <strong>${money(totals.liquidez)}</strong>
+        <small>Dinero realmente disponible, separado de activos y prestamos.</small>
+      </div>
+      <div class="finance-formula">
+        Inversion + rentas + recuperado - activos - prestamos - mantenimiento - otros egresos
+      </div>
+    </section>
+
+    <div class="finance-module-grid">
+      ${financeModuleCard("Inversion", money(totals.inversion), "Capital inicial y aportaciones", "green")}
+      ${financeModuleCard("Activos", money(totals.activos), "Vehiculos y gastos para iniciar", "gold")}
+      ${financeModuleCard("Rentas", money(totals.rentas), "Ingresos por renta", "green")}
+      ${financeModuleCard("Prestamos", money(totals.loans.outstanding), `${money(totals.loans.lent)} prestado`, "purple")}
+      ${financeModuleCard("Mantenimiento", money(totals.mantenimiento), "Gastos por coche trabajando", "red")}
+      ${financeModuleCard("Utilidad operativa", money(totals.utilidadOperativa), "No incluye compra de activos", "blue")}
     </div>
 
-    <section class="module-panel loan-summary-panel">
+    <section class="module-panel finance-review-panel">
       <div class="panel-header">
         <div>
-          <h3>Prestamos por cobrar</h3>
-          <p>Separados de la utilidad operativa, pero visibles en caja estimada.</p>
+          <h3>Reclasificacion sugerida</h3>
+          <p>Revisa los movimientos existentes. Si algo quedo mal, toca el registro y cambia el modulo financiero.</p>
         </div>
-        <button class="primary-btn" data-create="loans" type="button">Agregar prestamo</button>
       </div>
-      <div class="finance-list" data-grid="loans">
-        ${state.loans.map((record) => loanRow(record)).join("") || `<div class="empty-state">Sin prestamos registrados.</div>`}
+      <div class="finance-list">
+        ${financeMigrationPreview()}
       </div>
     </section>
 
@@ -929,7 +1072,7 @@ function renderFinance() {
       <div class="panel-header">
         <div>
           <h3>Balance por coche</h3>
-          <p>Utilidad operativa por coche y caja despues de prestamos pendientes.</p>
+          <p>Rentas, gastos y prestamos relacionados con cada unidad.</p>
         </div>
       </div>
       <div class="vehicle-finance-list">
@@ -938,8 +1081,23 @@ function renderFinance() {
     </section>
 
     <div class="dashboard-layout">
-      ${financePanel("income", "Ingresos", "Crear ingresos por vehiculo, chofer y periodo.")}
-      ${financePanel("expenses", "Egresos", "Registrar gastos por vehiculo y categoria.")}
+      ${financePanel("income", "Inversion", "Capital inicial y aportaciones posteriores.", "inversion")}
+      ${financePanel("income", "Rentas", "Ingresos cobrados por renta de vehiculos.", "renta")}
+      ${financePanel("expenses", "Activos", "Compra de vehiculos y gastos antes de operar.", "activo")}
+      ${financePanel("expenses", "Mantenimiento", "Servicios, refacciones y reparaciones por vehiculo.", "mantenimiento")}
+      ${financePanel("expenses", "Otros egresos", "Salidas de dinero que no son activos ni mantenimiento.", "otro_egreso")}
+      <section class="module-panel loan-summary-panel">
+        <div class="panel-header">
+          <div>
+            <h3>Prestamos</h3>
+            <p>Dinero prestado, recuperado y saldo por cobrar.</p>
+          </div>
+          <button class="primary-btn" data-create="loans" type="button">Agregar prestamo</button>
+        </div>
+        <div class="finance-list" data-grid="loans">
+          ${state.loans.map((record) => loanRow(record)).join("") || `<div class="empty-state">Sin prestamos registrados.</div>`}
+        </div>
+      </section>
     </div>
   `;
   bindModule("income");
@@ -947,7 +1105,9 @@ function renderFinance() {
   bindModule("loans");
 }
 
-function financePanel(type, title, subtitle) {
+function financePanel(type, title, subtitle, bucket = "") {
+  const records = bucket ? financeRecords(type, bucket) : state[type];
+  const createBucket = bucket ? ` data-finance-bucket="${bucket}"` : "";
   return `
     <section class="module-panel">
       <div class="panel-header">
@@ -955,17 +1115,19 @@ function financePanel(type, title, subtitle) {
           <h3>${title}</h3>
           <p>${subtitle}</p>
         </div>
-        <button class="primary-btn" data-create="${type}" type="button">Agregar</button>
+        <button class="primary-btn" data-create="${type}"${createBucket} type="button">Agregar</button>
       </div>
       <div class="finance-list" data-grid="${type}">
-        ${state[type].map((record) => financeRow(type, record)).join("") || `<div class="empty-state">Sin movimientos.</div>`}
+        ${records.map((record) => financeRow(type, record)).join("") || `<div class="empty-state">Sin movimientos.</div>`}
       </div>
     </section>
   `;
 }
 
 function bindModule(type) {
-  $$(`[data-create="${type}"]`).forEach((button) => button.addEventListener("click", () => openRecord(type)));
+  $$(`[data-create="${type}"]`).forEach((button) => button.addEventListener("click", () => openRecord(type, null, {
+    finance_bucket: button.dataset.financeBucket || ""
+  })));
   $$(`[data-edit-type="${type}"]`).forEach((element) => {
     element.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -1036,13 +1198,18 @@ function recordCard(type, record) {
 
 function financeRow(type, record) {
   const amount = Number(record.amount || 0);
+  const bucket = financeBucket(type, record);
+  const status = financeBucketStatus(type, record);
   return `
     <button class="list-row" data-edit-type="${type}" data-id="${record.id}" type="button">
       <span>
         <strong>${record.concept || "Movimiento"}</strong>
-        <small>${record.vehicle_code || "Sin vehiculo"} - ${record.date || "Sin fecha"}</small>
+        <small>${record.vehicle_code || "Sin vehiculo"} - ${record.date || "Sin fecha"} - ${financeBucketName(bucket)}</small>
       </span>
-      <span class="traffic ${type === "income" ? "green" : "red"}">${money(amount)}</span>
+      <span>
+        <b class="finance-amount ${type === "income" ? "positive" : "negative"}">${money(amount)}</b>
+        <em class="traffic ${status === "manual" ? "green" : status === "revision" ? "yellow" : "gray"}">${status === "manual" ? "Manual" : status === "revision" ? "Revision" : "Sugerido"}</em>
+      </span>
     </button>
   `;
 }
@@ -1100,10 +1267,17 @@ function bindDialog() {
   });
 }
 
-function openRecord(type, id = null) {
+function openRecord(type, id = null, defaults = {}) {
   activeRecordType = type;
   activeRecordId = id;
-  const record = id ? state[type].find((item) => item.id === id) : {};
+  const storedRecord = (id ? state[type].find((item) => item.id === id) : defaults) || {};
+  const record = ["income", "expenses"].includes(type)
+    ? {
+        ...storedRecord,
+        finance_bucket: storedRecord.finance_bucket || suggestedFinanceBucket(type, storedRecord),
+        classification_status: storedRecord.classification_status || "revision"
+      }
+    : storedRecord;
   $("#dialog-title").textContent = `${id ? "Editar" : "Nuevo"} ${labelForType(type)}`;
   $("#delete-record").classList.toggle("is-hidden", !id);
   $("#dialog-fields").innerHTML = fieldSets[type].map((field) => inputForField(field, record)).join("");
@@ -1130,6 +1304,10 @@ function applyRecordDefaults(type, record) {
   }
   if (type === "services") {
     record.status = record.status || "pendiente";
+  }
+  if (type === "income" || type === "expenses") {
+    record.finance_bucket = record.finance_bucket || suggestedFinanceBucket(type, record);
+    record.classification_status = "manual";
   }
 }
 
@@ -1307,7 +1485,7 @@ function profileMovementRow(record) {
   `;
 }
 
-function inputForField([name, label, type, options], record = {}) {
+function inputForField([name, label, type, options, targetField, accept], record = {}) {
   const value = record[name] || "";
   const full = type === "textarea" ? " full" : "";
   if (type === "textarea") {
@@ -1349,7 +1527,8 @@ function inputForField([name, label, type, options], record = {}) {
     `;
   }
   if (type === "file") {
-    return `<label>${label}<input name="${name}" type="file" /></label>`;
+    const acceptAttr = accept ? ` accept="${escapeAttr(accept)}"` : "";
+    return `<label>${label}<input name="${name}" type="file"${acceptAttr} /></label>`;
   }
   if (type === "select") {
     return `
