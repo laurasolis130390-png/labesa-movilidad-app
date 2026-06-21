@@ -562,7 +562,7 @@ function serviceSummary(records) {
 function serviceHistoryRow(record) {
   const status = statusForRecord("services", record);
   return `
-    <article class="service-row" data-edit-type="services" data-id="${record.id}">
+    <article class="service-row" data-edit-type="services" data-id="${record.id}" role="button" tabindex="0">
       <button class="service-row-main" data-edit-type="services" data-id="${record.id}" type="button">
         <span>
           <strong>${record.service_date || "Sin fecha"} - ${record.vehicle_code || "Sin vehiculo"}</strong>
@@ -966,7 +966,18 @@ function financePanel(type, title, subtitle) {
 
 function bindModule(type) {
   $$(`[data-create="${type}"]`).forEach((button) => button.addEventListener("click", () => openRecord(type)));
-  $$(`[data-edit-type="${type}"]`).forEach((button) => button.addEventListener("click", () => openRecord(type, button.dataset.id)));
+  $$(`[data-edit-type="${type}"]`).forEach((element) => {
+    element.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openRecord(type, element.dataset.id);
+    });
+    element.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      event.stopPropagation();
+      openRecord(type, element.dataset.id);
+    });
+  });
   if (type === "vehicles") {
     $$("[data-profile-id]").forEach((button) => button.addEventListener("click", () => openVehicleProfile(button.dataset.profileId)));
   }
