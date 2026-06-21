@@ -496,7 +496,7 @@ function renderModule(type, title, subtitle) {
         <button class="primary-btn" data-create="${type}" type="button">Agregar</button>
       </div>
       <div class="toolbar">
-        <input data-search="${type}" placeholder="Buscar" />
+        <input data-search="${type}" placeholder="Buscar" autocomplete="off" autocapitalize="none" spellcheck="false" />
         <select data-filter="${type}">
           <option value="">Todos los estatus</option>
           <option value="green">Vigente</option>
@@ -577,7 +577,7 @@ function renderServicesModule(title, subtitle) {
         ${statCard("Revisiones", money(summary.revision), "historial")}
       </div>
       <div class="toolbar">
-        <input data-search="services" placeholder="Buscar por coche, taller o nota" />
+        <input data-search="services" placeholder="Buscar por coche, taller o nota" autocomplete="off" autocapitalize="none" spellcheck="false" />
         <select data-filter="services">
           <option value="">Todos los estatus</option>
           <option value="yellow">Pendiente/programado</option>
@@ -618,6 +618,9 @@ function serviceHistoryRow(record) {
         <span>Km ingreso: <b>${record.current_km || "N/D"}</b></span>
         <span>Proximo km: <b>${record.next_km || "N/D"}</b></span>
         <span>Proxima revision: <b>${record.next_service_date || "Sin fecha"}</b></span>
+      </div>
+      <div class="service-row-actions">
+        <button class="small-btn" data-edit-type="services" data-id="${record.id}" type="button">${navIcon("edit")} Editar</button>
       </div>
       ${record.notes ? `<p>${escapeHtml(record.notes)}</p>` : ""}
     </article>

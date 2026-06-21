@@ -1240,6 +1240,23 @@ textarea:focus {
   color: var(--brand-white);
 }
 
+.service-row-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.service-row-actions .small-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.service-row-actions .small-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
 .service-row p {
   margin: 0;
 }
