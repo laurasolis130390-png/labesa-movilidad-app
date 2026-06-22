@@ -30,6 +30,7 @@ const tableMap = {
   drivers: "drivers",
   documents: "vehicle_documents",
   services: "services",
+  mileage_logs: "mileage_logs",
   gps: "gps_units",
   income: "income",
   expenses: "expenses",
@@ -98,12 +99,18 @@ const fieldSets = {
     ["vehicle_code", "Vehiculo", "vehicle-select"],
     ["service_type", "Tipo de servicio", "select", ["reparacion", "refaccion", "mantenimiento", "revision", "otro"]],
     ["service_date", "Fecha de reparacion o revision", "date"],
-    ["current_km", "Kilometraje al ingresar", "number"],
     ["next_service_date", "Proxima revision", "date"],
     ["provider", "Taller o proveedor", "text"],
     ["cost", "Costo", "number"],
     ["status", "Estatus", "select", ["pendiente", "programado", "realizado", "cancelado"]],
     ["notes", "Descripcion del servicio", "textarea"]
+  ],
+  mileage_logs: [
+    ["vehicle_code", "Vehiculo", "vehicle-select"],
+    ["reading_date", "Fecha de entrada", "date"],
+    ["kilometers", "Kilometraje", "number"],
+    ["reason", "Motivo de entrada", "text"],
+    ["notes", "Observaciones", "textarea"]
   ],
   gps: [
     ["vehicle_code", "Vehiculo", "vehicle-select"],
@@ -181,6 +188,7 @@ const seed = {
     }
   ],
   services: [],
+  mileage_logs: [],
   gps: [],
   income: [
     {
@@ -556,6 +564,7 @@ function vehicleCleanCard(record) {
 
 function renderServicesModule(title, subtitle) {
   const records = [...(state.services || [])].sort((a, b) => String(a.service_date || "").localeCompare(String(b.service_date || "")));
+  const mileageRecords = [...(state.mileage_logs || [])].sort((a, b) => String(b.reading_date || "").localeCompare(String(a.reading_date || "")));
   const summary = serviceSummary(records);
   const view = $("#services-view");
   view.innerHTML = `
@@ -587,8 +596,22 @@ function renderServicesModule(title, subtitle) {
         ${records.map(serviceHistoryRow).join("") || `<div class="empty-state">Aun no hay servicios mecanicos registrados.</div>`}
       </div>
     </section>
+
+    <section class="module-panel mileage-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Kilometrajes</h3>
+          <p>Bitacora independiente para registrar el kilometraje cada vez que una unidad entra al taller.</p>
+        </div>
+        <button class="primary-btn" data-create="mileage_logs" type="button">Agregar kilometraje</button>
+      </div>
+      <div class="service-history" data-grid="mileage_logs">
+        ${mileageRecords.map(mileageLogRow).join("") || `<div class="empty-state">Aun no hay kilometrajes registrados.</div>`}
+      </div>
+    </section>
   `;
   bindModule("services");
+  bindModule("mileage_logs");
 }
 
 function serviceSummary(records) {
@@ -612,10 +635,25 @@ function serviceHistoryRow(record) {
         <span class="traffic ${status.key}">${status.label}</span>
       </button>
       <div class="service-row-meta">
-        <span>Km ingreso: <b>${record.current_km || "N/D"}</b></span>
         <span>Proxima revision: <b>${record.next_service_date || "Sin fecha"}</b></span>
       </div>
       ${record.notes ? `<p><b>Descripcion:</b> ${escapeHtml(record.notes)}</p>` : ""}
+    </article>
+  `;
+}
+
+function mileageLogRow(record) {
+  const vehicle = record.vehicle_code || "Sin vehiculo";
+  return `
+    <article class="service-row mileage-row">
+      <button class="service-row-main" data-edit-type="mileage_logs" data-id="${record.id}" type="button">
+        <span>
+          <strong>${record.reading_date || "Sin fecha"} - ${vehicle}</strong>
+          <small>${record.reason || "Entrada a taller"}</small>
+        </span>
+        <span class="traffic green">${Number(record.kilometers || 0).toLocaleString("es-MX")} km</span>
+      </button>
+      ${record.notes ? `<p>${escapeHtml(record.notes)}</p>` : ""}
     </article>
   `;
 }
@@ -1152,6 +1190,9 @@ function filterRecords(type) {
   if (type === "services") {
     const sorted = records.sort((a, b) => String(a.service_date || "").localeCompare(String(b.service_date || "")));
     grid.innerHTML = sorted.map(serviceHistoryRow).join("") || `<div class="empty-state">No hay coincidencias.</div>`;
+  } else if (type === "mileage_logs") {
+    const sorted = records.sort((a, b) => String(b.reading_date || "").localeCompare(String(a.reading_date || "")));
+    grid.innerHTML = sorted.map(mileageLogRow).join("") || `<div class="empty-state">No hay coincidencias.</div>`;
   } else {
     grid.innerHTML = records.map((record) => recordCard(type, record)).join("") || `<div class="empty-state">No hay coincidencias.</div>`;
   }
@@ -1289,6 +1330,9 @@ function applyRecordDefaults(type, record) {
   }
   if (type === "services") {
     record.status = record.status || "pendiente";
+  }
+  if (type === "mileage_logs") {
+    record.reading_date = record.reading_date || isoDate(0);
   }
   if (type === "income" || type === "expenses") {
     record.finance_bucket = record.finance_bucket || suggestedFinanceBucket(type, record);
@@ -1542,6 +1586,10 @@ async function syncFromSupabase() {
   for (const [key, table] of Object.entries(tableMap)) {
     const { data, error } = await supabaseClient.from(table).select("*").order("created_at", { ascending: false });
     if (error) {
+      if (key === "mileage_logs" && /does not exist|schema cache|relation/i.test(error.message || "")) {
+        state[key] = state[key] || [];
+        continue;
+      }
       alert(`No se pudieron cargar datos de ${table}: ${error.message}`);
     } else if (Array.isArray(data)) {
       state[key] = data;
@@ -1564,6 +1612,10 @@ async function upsertRemote(type, record) {
   }
   const { error } = await supabaseClient.from(table).upsert(record);
   if (error) {
+    if (type === "mileage_logs" && /does not exist|schema cache|relation/i.test(error.message || "")) {
+      alert("Falta crear la tabla de kilometrajes en Supabase. Corre el archivo mileage-logs.sql y vuelve a guardar.");
+      return false;
+    }
     alert(`No se pudo guardar en Supabase: ${error.message}`);
     return false;
   }
@@ -1612,6 +1664,7 @@ function statusForRecord(type, record) {
   if (type === "gps") return statusFromDate(record.expires_at);
   if (type === "drivers") return statusFromDate(record.license_expiration);
   if (type === "loans") return loanStatus(record);
+  if (type === "mileage_logs") return { key: "green", label: "Registrado" };
   return record.status === "activo" || record.status === "disponible" ? { key: "green", label: "Vigente" } : { key: "gray", label: "Sin fecha" };
 }
 
@@ -1763,6 +1816,7 @@ function metaFor(type, record) {
     drivers: [`Codigo: ${record.internal_code || "N/D"}`, `Telefono: ${record.phone || "N/D"}`, `Vehiculo: ${record.vehicle_assigned || "Sin asignar"}`, `Licencia: ${record.license_expiration || "Sin fecha"}`, `Contrato: ${record.contract_start || "N/D"} a ${record.contract_end || "N/D"}`],
     documents: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Vence: ${record.expires_at || "Sin fecha"}`],
     services: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Proximo: ${record.next_service_date || "Sin fecha"}`, `Costo: ${money(record.cost || 0)}`],
+    mileage_logs: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Fecha: ${record.reading_date || "Sin fecha"}`, `Km: ${Number(record.kilometers || 0).toLocaleString("es-MX")}`],
     gps: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Conexion: ${record.last_connection || "Sin dato"}`, `Vence: ${record.expires_at || "Sin fecha"}`]
   };
   return map[type] || [];
@@ -1773,6 +1827,7 @@ function getTitle(type, record) {
   if (type === "drivers") return `${record.internal_code || "Chofer"} - ${record.full_name || ""}`.trim();
   if (type === "documents") return record.document_name || "Documento";
   if (type === "services") return record.service_type || "Servicio";
+  if (type === "mileage_logs") return `${record.vehicle_code || "Vehiculo"} - ${Number(record.kilometers || 0).toLocaleString("es-MX")} km`;
   if (type === "gps") return record.gps_name || "Unidad GPS";
   if (type === "loans") return record.borrower_name || "Prestamo";
   return record.concept || "Registro";
@@ -1784,6 +1839,7 @@ function labelForType(type) {
     drivers: "chofer",
     documents: "documento",
     services: "servicio",
+    mileage_logs: "kilometraje",
     gps: "GPS",
     income: "ingreso",
     expenses: "egreso",
