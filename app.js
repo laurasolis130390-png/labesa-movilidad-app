@@ -100,13 +100,10 @@ const fieldSets = {
     ["service_date", "Fecha de reparacion o revision", "date"],
     ["current_km", "Kilometraje al ingresar", "number"],
     ["next_service_date", "Proxima revision", "date"],
-    ["next_km", "Proximo kilometraje", "number"],
     ["provider", "Taller o proveedor", "text"],
     ["cost", "Costo", "number"],
     ["status", "Estatus", "select", ["pendiente", "programado", "realizado", "cancelado"]],
-    ["receipt_url", "Fotos o comprobantes (URL publica)", "url"],
-    ["__file_receipt_url", "Subir comprobante", "file", "service-receipts", "receipt_url"],
-    ["notes", "Anotaciones", "textarea"]
+    ["notes", "Descripcion del servicio", "textarea"]
   ],
   gps: [
     ["vehicle_code", "Vehiculo", "vehicle-select"],
@@ -496,7 +493,7 @@ function renderModule(type, title, subtitle) {
         <button class="primary-btn" data-create="${type}" type="button">Agregar</button>
       </div>
       <div class="toolbar">
-        <input data-search="${type}" placeholder="Buscar" autocomplete="off" autocapitalize="none" spellcheck="false" />
+        <input data-search="${type}" placeholder="Buscar" />
         <select data-filter="${type}">
           <option value="">Todos los estatus</option>
           <option value="green">Vigente</option>
@@ -577,7 +574,7 @@ function renderServicesModule(title, subtitle) {
         ${statCard("Revisiones", money(summary.revision), "historial")}
       </div>
       <div class="toolbar">
-        <input data-search="services" placeholder="Buscar por coche, taller o nota" autocomplete="off" autocapitalize="none" spellcheck="false" />
+        <input data-search="services" placeholder="Buscar por coche, taller o nota" />
         <select data-filter="services">
           <option value="">Todos los estatus</option>
           <option value="yellow">Pendiente/programado</option>
@@ -606,7 +603,7 @@ function serviceSummary(records) {
 function serviceHistoryRow(record) {
   const status = statusForRecord("services", record);
   return `
-    <article class="service-row" data-edit-type="services" data-id="${record.id}" role="button" tabindex="0">
+    <article class="service-row" data-edit-type="services" data-id="${record.id}">
       <button class="service-row-main" data-edit-type="services" data-id="${record.id}" type="button">
         <span>
           <strong>${record.service_date || "Sin fecha"} - ${record.vehicle_code || "Sin vehiculo"}</strong>
@@ -616,13 +613,9 @@ function serviceHistoryRow(record) {
       </button>
       <div class="service-row-meta">
         <span>Km ingreso: <b>${record.current_km || "N/D"}</b></span>
-        <span>Proximo km: <b>${record.next_km || "N/D"}</b></span>
         <span>Proxima revision: <b>${record.next_service_date || "Sin fecha"}</b></span>
       </div>
-      <div class="service-row-actions">
-        <button class="small-btn" data-edit-type="services" data-id="${record.id}" type="button">${navIcon("edit")} Editar</button>
-      </div>
-      ${record.notes ? `<p>${escapeHtml(record.notes)}</p>` : ""}
+      ${record.notes ? `<p><b>Descripcion:</b> ${escapeHtml(record.notes)}</p>` : ""}
     </article>
   `;
 }
@@ -1131,18 +1124,7 @@ function bindModule(type) {
   $$(`[data-create="${type}"]`).forEach((button) => button.addEventListener("click", () => openRecord(type, null, {
     finance_bucket: button.dataset.financeBucket || ""
   })));
-  $$(`[data-edit-type="${type}"]`).forEach((element) => {
-    element.addEventListener("click", (event) => {
-      event.stopPropagation();
-      openRecord(type, element.dataset.id);
-    });
-    element.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      event.stopPropagation();
-      openRecord(type, element.dataset.id);
-    });
-  });
+  $$(`[data-edit-type="${type}"]`).forEach((button) => button.addEventListener("click", () => openRecord(type, button.dataset.id)));
   if (type === "vehicles") {
     $$("[data-profile-id]").forEach((button) => button.addEventListener("click", () => openVehicleProfile(button.dataset.profileId)));
   }
@@ -1710,7 +1692,7 @@ function collectAlerts() {
     if (isServiceClosed(record.status) || !record.next_service_date) return;
     items.push({
       title: `Servicio mecanico - ${record.vehicle_code || "Sin vehiculo"}`,
-      detail: `${capitalize(record.service_type || "servicio")} ${record.next_km ? `- ${record.next_km} km` : ""}`,
+      detail: capitalize(record.service_type || "servicio"),
       status: statusFromDate(record.next_service_date)
     });
   });
