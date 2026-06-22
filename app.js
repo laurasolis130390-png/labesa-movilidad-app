@@ -22,7 +22,6 @@ const modules = [
   { id: "admin", title: "Administracion", icon: "shield" },
   { id: "gps", title: "GPS", icon: "globe" },
   { id: "finance", title: "Finanzas", icon: "money" },
-  { id: "drivers", title: "Choferes", icon: "user" },
   { id: "services", title: "Servicios mecanicos", icon: "tool" }
 ];
 
@@ -89,6 +88,14 @@ const fieldSets = {
     ["notes", "Notas", "textarea"]
   ],
   driver_admin: [
+    ["full_name", "Nombre completo", "text"],
+    ["phone", "Telefono", "tel"],
+    ["vehicle_assigned", "Vehiculo asignado", "vehicle-select"],
+    ["photo_url", "Foto del chofer (URL publica)", "url"],
+    ["__file_photo_url", "Subir foto del chofer", "file", "driver-photos", "photo_url"],
+    ["ine_photo_url", "Foto INE (URL publica)", "url"],
+    ["__file_ine_photo_url", "Subir foto INE", "file", "driver-photos", "ine_photo_url", "image/*"],
+    ["license", "Licencia", "text"],
     ["license_expiration", "Vencimiento de licencia", "date"],
     ["license_photo_url", "Licencia del chofer (URL publica)", "url"],
     ["__file_license_photo_url", "Subir foto de licencia", "file", "driver-photos", "license_photo_url", "image/*"],
@@ -375,7 +382,6 @@ function renderAll() {
   renderDashboard();
   renderModule("vehicles", "Vehiculos registrados", "Busca, filtra y administra cada unidad.");
   renderAdminModule();
-  renderModule("drivers", "Choferes", "Licencias, estatus y asignaciones.");
   renderModule("services", "Servicios mecanicos", "Historial por coche, fecha y kilometraje.");
   renderModule("gps", "GPS / Wialon", "Preparado para integracion con API de Wialon.");
   renderFinance();
@@ -418,7 +424,7 @@ function renderDashboard() {
 
     <div class="stats-grid operational-grid premium-stats-grid">
       ${premiumStatCard("Vehiculos", state.vehicles.length, `${activeVehicles} activos`, "car", "teal", "vehicles")}
-      ${premiumStatCard("Conductores", state.drivers.length, "capturados", "user", "purple", "drivers")}
+      ${premiumStatCard("Conductores", state.drivers.length, "capturados", "user", "purple", "admin")}
       ${premiumStatCard("Calendario", alertItems.length, "proximos eventos", "calendar", "blue", "admin")}
       ${premiumStatCard("Liquidez", money(finance.liquidez), "caja disponible", "money", "green", "finance")}
     </div>
@@ -432,7 +438,7 @@ function renderDashboard() {
       </div>
       <div class="quick-grid premium-actions-grid">
         ${quickAction("Agregar vehiculo", "vehicles", "plus", "vehicles", "teal")}
-        ${quickAction("Nuevo conductor", "drivers", "user-plus", "drivers", "purple")}
+        ${quickAction("Nuevo conductor", "admin", "user-plus", "drivers", "purple", "driver_admin")}
         ${quickAction("Nuevo evento", "services", "calendar", "services", "blue")}
         ${quickAction("Registrar ingreso", "finance", "file", "income", "green")}
       </div>
@@ -449,7 +455,7 @@ function renderDashboard() {
           filterRecords("services");
         }
       }
-      if (button.dataset.quickCreate) openRecord(button.dataset.quickCreate);
+      if (button.dataset.quickCreate) openRecord(button.dataset.quickCreate, null, {}, button.dataset.quickFieldset || button.dataset.quickCreate);
     })
   );
 }
@@ -478,10 +484,11 @@ function premiumStatCard(label, value, detail, icon, tone, view = "") {
   `;
 }
 
-function quickAction(label, view, icon, createType = "", tone = "teal") {
+function quickAction(label, view, icon, createType = "", tone = "teal", fieldSetType = "") {
   const createAttr = createType ? ` data-quick-create="${createType}"` : "";
+  const fieldSetAttr = fieldSetType ? ` data-quick-fieldset="${fieldSetType}"` : "";
   return `
-    <button class="quick-card premium-action-card tone-${tone}" data-view="${view}"${createAttr} type="button">
+    <button class="quick-card premium-action-card tone-${tone}" data-view="${view}"${createAttr}${fieldSetAttr} type="button">
       <span>${navIcon(icon)}</span>
       ${label}
     </button>
@@ -515,10 +522,6 @@ function renderModule(type, title, subtitle) {
     renderServicesModule(title, subtitle);
     return;
   }
-  if (type === "drivers") {
-    renderDriversModule(title, subtitle);
-    return;
-  }
   const records = state[type] || [];
   const view = $(`#${type}-view`);
   view.innerHTML = `
@@ -547,26 +550,6 @@ function renderModule(type, title, subtitle) {
     </section>
   `;
   bindModule(type);
-}
-
-function renderDriversModule(title, subtitle) {
-  const records = state.drivers || [];
-  const view = $("#drivers-view");
-  view.innerHTML = `
-    <section class="module-panel">
-      <div class="panel-header">
-        <div>
-          <h3>${title}</h3>
-          <p>${subtitle}</p>
-        </div>
-        <button class="primary-btn" data-create="drivers" type="button">Agregar</button>
-      </div>
-      <div class="records-grid" data-grid="drivers">
-        ${records.map((record) => recordCard("drivers", record)).join("") || `<div class="empty-state">No hay choferes todavia.</div>`}
-      </div>
-    </section>
-  `;
-  bindModule("drivers");
 }
 
 function renderVehiclesModule(title, subtitle) {
@@ -647,8 +630,9 @@ function renderAdminModule() {
       <div class="panel-header">
         <div>
           <h3>Documentos de choferes</h3>
-          <p>Licencias, contratos y responsivas.</p>
+          <p>Alta, datos principales, licencias, contratos y responsivas.</p>
         </div>
+        <button class="primary-btn" data-create-driver-admin type="button">Agregar chofer</button>
       </div>
       <div class="admin-card-grid">
         ${drivers.length ? drivers.map(adminDriverCard).join("") : `<div class="empty-state">Agrega choferes para administrar sus documentos.</div>`}
@@ -662,6 +646,7 @@ function renderAdminModule() {
   $$("[data-admin-driver]").forEach((button) =>
     button.addEventListener("click", () => openRecord("drivers", button.dataset.adminDriver, {}, "driver_admin", true))
   );
+  $("[data-create-driver-admin]")?.addEventListener("click", () => openRecord("drivers", null, {}, "driver_admin"));
 }
 
 function adminVehicleCard(vehicle) {
@@ -708,11 +693,13 @@ function adminDriverCard(driver) {
         <span class="admin-icon">${navIcon("user")}</span>
         <span>
           <strong>${escapeHtml(driver.full_name || "Chofer")}</strong>
-          <small>${escapeHtml(driver.vehicle_assigned || "Sin vehiculo asignado")}</small>
+          <small>${escapeHtml([driver.phone, driver.vehicle_assigned || "Sin vehiculo asignado"].filter(Boolean).join(" - "))}</small>
         </span>
         <em class="traffic ${summaryStatus.key}">${summaryStatus.label}</em>
       </div>
       <div class="admin-doc-list">
+        ${adminFileRow("Foto del chofer", driver.photo_url)}
+        ${adminFileRow("INE", driver.ine_photo_url)}
         ${adminDateRow("Licencia", driver.license_expiration, licenseStatus, driver.license_photo_url)}
         ${adminDateRow("Contrato / responsiva", driver.contract_end || driver.contract_renewal_date, contractStatus, driver.contract_file_url)}
       </div>
