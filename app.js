@@ -76,7 +76,11 @@ const fieldSets = {
     ["phone", "Telefono", "tel"],
     ["address", "Direccion", "textarea"],
     ["ine", "INE", "text"],
+    ["ine_photo_url", "Foto INE (URL publica)", "url"],
+    ["__file_ine_photo_url", "Subir foto INE", "file", "driver-photos", "ine_photo_url", "image/*"],
     ["license", "Licencia", "text"],
+    ["license_photo_url", "Foto licencia (URL publica)", "url"],
+    ["__file_license_photo_url", "Subir foto de licencia", "file", "driver-photos", "license_photo_url", "image/*"],
     ["contract_start", "Inicio de contrato", "date"],
     ["vehicle_assigned", "Vehiculo asignado", "vehicle-select"],
     ["photo_url", "Foto del chofer (URL publica)", "url"],
@@ -511,6 +515,10 @@ function renderModule(type, title, subtitle) {
     renderServicesModule(title, subtitle);
     return;
   }
+  if (type === "drivers") {
+    renderDriversModule(title, subtitle);
+    return;
+  }
   const records = state[type] || [];
   const view = $(`#${type}-view`);
   view.innerHTML = `
@@ -539,6 +547,26 @@ function renderModule(type, title, subtitle) {
     </section>
   `;
   bindModule(type);
+}
+
+function renderDriversModule(title, subtitle) {
+  const records = state.drivers || [];
+  const view = $("#drivers-view");
+  view.innerHTML = `
+    <section class="module-panel">
+      <div class="panel-header">
+        <div>
+          <h3>${title}</h3>
+          <p>${subtitle}</p>
+        </div>
+        <button class="primary-btn" data-create="drivers" type="button">Agregar</button>
+      </div>
+      <div class="records-grid" data-grid="drivers">
+        ${records.map((record) => recordCard("drivers", record)).join("") || `<div class="empty-state">No hay choferes todavia.</div>`}
+      </div>
+    </section>
+  `;
+  bindModule("drivers");
 }
 
 function renderVehiclesModule(title, subtitle) {
@@ -1615,19 +1643,6 @@ function openVehicleProfile(id) {
         </div>
       </article>
 
-      <article class="profile-box profile-box-wide">
-        <h4>Ultimos movimientos</h4>
-        <div class="finance-list">
-          ${movements.length ? movements.map(profileMovementRow).join("") : `<div class="empty-state">Sin movimientos para este coche.</div>`}
-        </div>
-      </article>
-
-      <article class="profile-box profile-box-wide">
-        <h4>Servicios y notas</h4>
-        ${profileLine("Proximo servicio", vehicle.next_service_date || "Sin fecha")}
-        ${profileLine("Notas de servicio", vehicle.service_notes || "Sin notas")}
-        ${profileLine("Notas generales", vehicle.notes || "Sin notas")}
-      </article>
     </div>
   `;
   $("#vehicle-profile-dialog").showModal();
@@ -1653,9 +1668,9 @@ function vehicleCalendarRows(vehicle) {
     ["Verificacion 1er semestre", vehicle.first_verification_due, isVerificationDone(vehicle.first_verification_status) ? { key: "green", label: "Verificado" } : statusFromDate(vehicle.first_verification_due)],
     ["Verificacion 2do semestre", vehicle.second_verification_due, isVerificationDone(vehicle.second_verification_status) ? { key: "green", label: "Verificado" } : statusFromDate(vehicle.second_verification_due)],
     ["Tenencia", vehicle.tax_expires_at, statusFromDate(vehicle.tax_expires_at)],
-    ["GPS", vehicle.gps_expires_at, statusFromDate(vehicle.gps_expires_at)],
-    ["Servicio", vehicle.next_service_date, isServiceClosed(vehicle.next_service_status) ? { key: "green", label: "Realizado" } : statusFromDate(vehicle.next_service_date)]
-  ];
+    ["GPS", vehicle.gps_expires_at, statusFromDate(vehicle.gps_expires_at)]
+  ].filter(([, , status]) => ["yellow", "red"].includes(status.key));
+  if (!rows.length) return `<div class="empty-state">Sin pendientes administrativos.</div>`;
   const html = rows.map(([label, dateValue, status]) => {
     return `
       <div class="profile-calendar-row">
