@@ -1,4 +1,4 @@
-const CONFIG = window.LABESA_CONFIG || {};
+﻿const CONFIG = window.LABESA_CONFIG || {};
 const hasSupabase = Boolean(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY && window.supabase);
 const supabaseClient = hasSupabase
   ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY)
@@ -19,6 +19,7 @@ const verificationSchedule = {
 const modules = [
   { id: "dashboard", title: "Inicio", icon: "home" },
   { id: "vehicles", title: "Vehiculos", icon: "car" },
+  { id: "admin", title: "Administracion", icon: "shield" },
   { id: "gps", title: "GPS", icon: "globe" },
   { id: "finance", title: "Finanzas", icon: "money" },
   { id: "drivers", title: "Choferes", icon: "user" },
@@ -40,10 +41,8 @@ const tableMap = {
 const fieldSets = {
   vehicles: [
     ["internal_code", "Codigo interno", "text"],
-    ["unit_type", "Tipo de unidad", "text"],
     ["brand", "Marca", "text"],
     ["model", "Modelo", "text"],
-    ["year", "Año", "number"],
     ["color", "Color", "text"],
     ["plates", "Placas", "text"],
     ["vin", "Numero de serie / VIN", "text"],
@@ -51,22 +50,25 @@ const fieldSets = {
     ["status", "Estatus", "select", ["activo", "inactivo", "taller", "disponible", "rentado"]],
     ["photo_url", "Foto del coche (URL publica)", "url"],
     ["__file_photo_url", "Subir foto del coche", "file", "vehicle-photos", "photo_url"],
-    ["circulation_card_photo_url", "Subir foto de tarjeta de circulacion", "file", "vehicle-documents", "circulation_card_photo_url"],
-    ["__file_insurance_policy_photo_url", "Subir PDF de poliza de seguro", "file", "vehicle-documents", "insurance_policy_photo_url", ".pdf,application/pdf"],
+    ["notes", "Notas generales", "textarea"]
+  ],
+  vehicle_admin: [
     ["verification_sticker", "Engomado", "sticker-select"],
     ["first_verification_due", "Verificacion primer semestre", "date"],
     ["first_verification_status", "Estatus primer semestre", "select", ["pendiente", "verificado"]],
     ["second_verification_due", "Verificacion segundo semestre", "date"],
     ["second_verification_status", "Estatus segundo semestre", "select", ["pendiente", "verificado"]],
-    ["insurance_expires_at", "Vencimiento de seguro", "date"],
     ["registration_expires_at", "Vencimiento tarjeta de circulacion", "date"],
-    ["tax_expires_at", "Vencimiento tenencia", "date"],
+    ["tax_expires_at", "Vencimiento refrendo / tenencia", "date"],
+    ["insurance_expires_at", "Vencimiento de seguro", "date"],
     ["gps_expires_at", "Vencimiento GPS", "date"],
-    ["next_service_date", "Proximo servicio", "date"],
-    ["next_service_km", "Kilometraje proximo servicio", "number"],
-    ["next_service_status", "Estatus de servicio", "select", ["pendiente", "programado", "realizado"]],
-    ["service_notes", "Notas de servicios / calendario", "textarea"],
-    ["notes", "Notas generales", "textarea"]
+    ["circulation_card_photo_url", "Tarjeta de circulacion (URL publica)", "url"],
+    ["__file_circulation_card_photo_url", "Subir foto de tarjeta de circulacion", "file", "vehicle-documents", "circulation_card_photo_url", "image/*"],
+    ["plates_photo_url", "Placas (URL publica)", "url"],
+    ["__file_plates_photo_url", "Subir foto de placas", "file", "vehicle-documents", "plates_photo_url", "image/*"],
+    ["insurance_policy_photo_url", "Poliza de seguro (URL publica)", "url"],
+    ["__file_insurance_policy_photo_url", "Subir PDF de poliza de seguro", "file", "vehicle-documents", "insurance_policy_photo_url", ".pdf,application/pdf"],
+    ["notes", "Observaciones administrativas", "textarea"]
   ],
   drivers: [
     ["internal_code", "Codigo interno", "text"],
@@ -75,16 +77,22 @@ const fieldSets = {
     ["address", "Direccion", "textarea"],
     ["ine", "INE", "text"],
     ["license", "Licencia", "text"],
-    ["license_expiration", "Vencimiento de licencia", "date"],
     ["contract_start", "Inicio de contrato", "date"],
-    ["contract_end", "Termino de contrato", "date"],
-    ["contract_renewal_date", "Renovacion de contrato", "date"],
     ["vehicle_assigned", "Vehiculo asignado", "vehicle-select"],
-    ["license_photo_url", "Subir foto de licencia", "file", "driver-photos", "license_photo_url"],
     ["photo_url", "Foto del chofer (URL publica)", "url"],
     ["__file_photo_url", "Subir foto del chofer", "file", "driver-photos", "photo_url"],
     ["status", "Estatus", "select", ["activo", "inactivo", "suspendido"]],
     ["notes", "Notas", "textarea"]
+  ],
+  driver_admin: [
+    ["license_expiration", "Vencimiento de licencia", "date"],
+    ["license_photo_url", "Licencia del chofer (URL publica)", "url"],
+    ["__file_license_photo_url", "Subir foto de licencia", "file", "driver-photos", "license_photo_url", "image/*"],
+    ["contract_end", "Termino de contrato", "date"],
+    ["contract_renewal_date", "Renovacion de contrato", "date"],
+    ["contract_file_url", "Contrato o responsiva (URL publica)", "url"],
+    ["__file_contract_file_url", "Subir PDF contrato/responsiva", "file", "driver-photos", "contract_file_url", ".pdf,application/pdf"],
+    ["notes", "Observaciones administrativas", "textarea"]
   ],
   documents: [
     ["vehicle_code", "Vehiculo", "vehicle-select"],
@@ -219,6 +227,7 @@ let state = loadLocal();
 let activeView = "dashboard";
 let activeRecordType = null;
 let activeRecordId = null;
+let activeFieldSetType = null;
 let wialonSession = null;
 let wialonUnits = [];
 
@@ -361,6 +370,7 @@ function switchView(view) {
 function renderAll() {
   renderDashboard();
   renderModule("vehicles", "Vehiculos registrados", "Busca, filtra y administra cada unidad.");
+  renderAdminModule();
   renderModule("drivers", "Choferes", "Licencias, estatus y asignaciones.");
   renderModule("services", "Servicios mecanicos", "Historial por coche, fecha y kilometraje.");
   renderModule("gps", "GPS / Wialon", "Preparado para integracion con API de Wialon.");
@@ -377,7 +387,7 @@ function renderDashboard() {
   $("#dashboard-view").innerHTML = `
     <section class="dashboard-intro">
       <div class="intro-copy">
-        <p>${greeting} 👋</p>
+        <p>${greeting} ðŸ‘‹</p>
         <h3>LaBeSa Movilidad</h3>
         <span>Inicio</span>
       </div>
@@ -405,7 +415,7 @@ function renderDashboard() {
     <div class="stats-grid operational-grid premium-stats-grid">
       ${premiumStatCard("Vehiculos", state.vehicles.length, `${activeVehicles} activos`, "car", "teal", "vehicles")}
       ${premiumStatCard("Conductores", state.drivers.length, "capturados", "user", "purple", "drivers")}
-      ${premiumStatCard("Calendario", alertItems.length, "proximos eventos", "calendar", "blue", "services")}
+      ${premiumStatCard("Calendario", alertItems.length, "proximos eventos", "calendar", "blue", "admin")}
       ${premiumStatCard("Liquidez", money(finance.liquidez), "caja disponible", "money", "green", "finance")}
     </div>
 
@@ -441,16 +451,14 @@ function renderDashboard() {
 }
 
 function dashboardAlertTargetView() {
-  const hasServiceAlerts = state.services.some((record) => !isServiceClosed(record.status) && ["yellow", "red"].includes(statusForRecord("services", record).key))
-    || state.vehicles.some((vehicle) => vehicle.next_service_date && !isServiceClosed(vehicle.next_service_status) && ["yellow", "red"].includes(statusFromDate(vehicle.next_service_date).key));
-  return hasServiceAlerts ? "services" : "vehicles";
+  return "admin";
 }
 
 function greetingForTime(date = new Date()) {
   const hour = date.getHours();
-  if (hour < 12) return "¡Buenos dias!";
-  if (hour < 19) return "¡Buenas tardes!";
-  return "¡Buenas noches!";
+  if (hour < 12) return "Â¡Buenos dias!";
+  if (hour < 19) return "Â¡Buenas tardes!";
+  return "Â¡Buenas noches!";
 }
 
 function premiumStatCard(label, value, detail, icon, tone, view = "") {
@@ -574,6 +582,144 @@ function vehicleCleanCard(record) {
       </div>
     </article>
   `;
+}
+
+function renderAdminModule() {
+  const alerts = collectAlerts();
+  const vehicles = state.vehicles || [];
+  const drivers = state.drivers || [];
+  const view = $("#admin-view");
+  view.innerHTML = `
+    <section class="module-panel admin-hero-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Administracion</h3>
+          <p>Vencimientos, documentos y pendientes por coche y chofer.</p>
+        </div>
+        <span class="traffic ${alerts.length ? "yellow" : "green"}">${alerts.length ? `${alerts.length} alerta${alerts.length === 1 ? "" : "s"}` : "Todo en orden"}</span>
+      </div>
+      <div class="finance-list admin-alert-list">
+        ${alerts.length ? alerts.slice(0, 8).map(alertRow).join("") : `<div class="empty-state">No hay documentos vencidos ni proximos a vencer.</div>`}
+      </div>
+    </section>
+
+    <section class="module-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Documentos por vehiculo</h3>
+          <p>Verificacion, tarjeta, placas, seguro, tenencia y GPS.</p>
+        </div>
+      </div>
+      <div class="admin-card-grid">
+        ${vehicles.length ? vehicles.map(adminVehicleCard).join("") : `<div class="empty-state">Agrega vehiculos para administrar sus documentos.</div>`}
+      </div>
+    </section>
+
+    <section class="module-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Documentos de choferes</h3>
+          <p>Licencias, contratos y responsivas.</p>
+        </div>
+      </div>
+      <div class="admin-card-grid">
+        ${drivers.length ? drivers.map(adminDriverCard).join("") : `<div class="empty-state">Agrega choferes para administrar sus documentos.</div>`}
+      </div>
+    </section>
+  `;
+
+  $$("[data-admin-vehicle]").forEach((button) =>
+    button.addEventListener("click", () => openRecord("vehicles", button.dataset.adminVehicle, {}, "vehicle_admin", true))
+  );
+  $$("[data-admin-driver]").forEach((button) =>
+    button.addEventListener("click", () => openRecord("drivers", button.dataset.adminDriver, {}, "driver_admin", true))
+  );
+}
+
+function adminVehicleCard(vehicle) {
+  const title = vehicleKey(vehicle) || "Vehiculo";
+  const summaryStatus = vehicleCalendarStatus(vehicle);
+  const rows = [
+    adminDateRow("Verificacion 1er semestre", vehicle.first_verification_due, isVerificationDone(vehicle.first_verification_status) ? { key: "green", label: "Verificado" } : statusFromDate(vehicle.first_verification_due)),
+    adminDateRow("Verificacion 2do semestre", vehicle.second_verification_due, isVerificationDone(vehicle.second_verification_status) ? { key: "green", label: "Verificado" } : statusFromDate(vehicle.second_verification_due)),
+    adminDateRow("Tarjeta de circulacion", vehicle.registration_expires_at, statusFromDate(vehicle.registration_expires_at), vehicle.circulation_card_photo_url),
+    adminFileRow("Placas", vehicle.plates_photo_url),
+    adminDateRow("Refrendo / tenencia", vehicle.tax_expires_at, statusFromDate(vehicle.tax_expires_at)),
+    adminDateRow("Seguro", vehicle.insurance_expires_at, statusFromDate(vehicle.insurance_expires_at), vehicle.insurance_policy_photo_url),
+    adminDateRow("GPS", vehicle.gps_expires_at, statusFromDate(vehicle.gps_expires_at))
+  ];
+  return `
+    <article class="admin-card">
+      <div class="admin-card-head">
+        <span class="admin-icon">${navIcon("car")}</span>
+        <span>
+          <strong>${escapeHtml(title)}</strong>
+          <small>${escapeHtml([vehicle.brand, vehicle.model, vehicle.plates].filter(Boolean).join(" - ") || "Sin datos del vehiculo")}</small>
+        </span>
+        <em class="traffic ${summaryStatus.key}">${summaryStatus.label}</em>
+      </div>
+      <div class="admin-doc-list">
+        ${rows.join("")}
+      </div>
+      <button class="small-btn admin-edit-btn" data-admin-vehicle="${vehicle.id}" type="button">${navIcon("edit")} Editar administracion</button>
+    </article>
+  `;
+}
+
+function adminDriverCard(driver) {
+  const licenseStatus = statusFromDate(driver.license_expiration);
+  const contractStatus = statusFromDate(driver.contract_end || driver.contract_renewal_date);
+  const summaryStatus = [licenseStatus, contractStatus].some((item) => item.key === "red")
+    ? { key: "red", label: "Vencido" }
+    : [licenseStatus, contractStatus].some((item) => item.key === "yellow")
+      ? { key: "yellow", label: "Proximo" }
+      : { key: "green", label: "Vigente" };
+  return `
+    <article class="admin-card">
+      <div class="admin-card-head">
+        <span class="admin-icon">${navIcon("user")}</span>
+        <span>
+          <strong>${escapeHtml(driver.full_name || "Chofer")}</strong>
+          <small>${escapeHtml(driver.vehicle_assigned || "Sin vehiculo asignado")}</small>
+        </span>
+        <em class="traffic ${summaryStatus.key}">${summaryStatus.label}</em>
+      </div>
+      <div class="admin-doc-list">
+        ${adminDateRow("Licencia", driver.license_expiration, licenseStatus, driver.license_photo_url)}
+        ${adminDateRow("Contrato / responsiva", driver.contract_end || driver.contract_renewal_date, contractStatus, driver.contract_file_url)}
+      </div>
+      <button class="small-btn admin-edit-btn" data-admin-driver="${driver.id}" type="button">${navIcon("edit")} Editar administracion</button>
+    </article>
+  `;
+}
+
+function adminDateRow(label, dateValue, status, fileUrl = "") {
+  return `
+    <div class="admin-doc-row">
+      <span>
+        <strong>${escapeHtml(label)}</strong>
+        <small>${dateValue || "Sin fecha"}${fileUrl ? ` - <a href="${escapeAttr(fileUrl)}" target="_blank" rel="noopener">Archivo</a>` : ""}</small>
+      </span>
+      <em class="traffic ${status.key}">${adminStatusLabel(status.label)}</em>
+    </div>
+  `;
+}
+
+function adminFileRow(label, fileUrl = "") {
+  const status = fileUrl ? { key: "green", label: "Cargado" } : { key: "gray", label: "Sin archivo" };
+  return `
+    <div class="admin-doc-row">
+      <span>
+        <strong>${escapeHtml(label)}</strong>
+        <small>${fileUrl ? `<a href="${escapeAttr(fileUrl)}" target="_blank" rel="noopener">Ver archivo</a>` : "Sin archivo"}</small>
+      </span>
+      <em class="traffic ${status.key}">${status.label}</em>
+    </div>
+  `;
+}
+
+function adminStatusLabel(label) {
+  return label === "Proximo" ? "Proximo a vencer" : label;
 }
 
 function renderServicesModule(title, subtitle) {
@@ -981,13 +1127,13 @@ function textForFinance(record) {
 function suggestedFinanceBucket(type, record) {
   const text = textForFinance(record);
   if (type === "income") {
-    if (/\b(inversion|inversi[oó]n|aportacion|aportaci[oó]n|capital|socio|inicial)\b/.test(text)) return "inversion";
+    if (/\b(inversion|inversi[oÃ³]n|aportacion|aportaci[oÃ³]n|capital|socio|inicial)\b/.test(text)) return "inversion";
     if (/\b(renta|semanalidad|semana|pago|cobro|chofer)\b/.test(text)) return "renta";
     return "renta";
   }
   if (type === "expenses") {
     if (/\b(compra|vehiculo|vehiculo|auto|unidad|placa|placas|alta|inicial|gps inicial|seguro inicial|verificacion inicial|ponerlo a trabajar|poner a trabajar)\b/.test(text)) return "activo";
-    if (/\b(mantenimiento|servicio|refaccion|refacci[oó]n|llanta|llantas|aceite|freno|frenos|afinacion|afinaci[oó]n|reparacion|reparaci[oó]n|mano de obra|grua|gr[uú]a|taller)\b/.test(text)) return "mantenimiento";
+    if (/\b(mantenimiento|servicio|refaccion|refacci[oÃ³]n|llanta|llantas|aceite|freno|frenos|afinacion|afinaci[oÃ³]n|reparacion|reparaci[oÃ³]n|mano de obra|grua|gr[uÃº]a|taller)\b/.test(text)) return "mantenimiento";
     if (record.category === "mantenimiento" || record.category === "refaccion") return "mantenimiento";
     if (["GPS", "seguro"].includes(record.category) && /\b(inicial|alta|compra)\b/.test(text)) return "activo";
     return "otro_egreso";
@@ -1270,13 +1416,15 @@ function bindDialog() {
   $("#record-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const record = {};
+    const submitted = {};
     for (const [key, value] of formData.entries()) {
-      if (!key.startsWith("__file_")) record[key] = value;
+      if (!key.startsWith("__file_")) submitted[key] = value;
     }
+    const existingRecord = activeRecordId ? state[activeRecordType].find((item) => item.id === activeRecordId) || {} : {};
+    const record = { ...existingRecord, ...submitted };
     record.id = activeRecordId || crypto.randomUUID();
     applyRecordDefaults(activeRecordType, record);
-    for (const field of fieldSets[activeRecordType]) {
+    for (const field of fieldSets[activeFieldSetType || activeRecordType]) {
       if (field[2] === "date" || field[2] === "datetime-local") {
         record[field[0]] = record[field[0]] || null;
       }
@@ -1310,9 +1458,10 @@ function bindDialog() {
   });
 }
 
-function openRecord(type, id = null, defaults = {}) {
+function openRecord(type, id = null, defaults = {}, fieldSetType = type, hideDelete = false) {
   activeRecordType = type;
   activeRecordId = id;
+  activeFieldSetType = fieldSetType;
   const storedRecord = (id ? state[type].find((item) => item.id === id) : defaults) || {};
   const record = ["income", "expenses"].includes(type)
     ? {
@@ -1321,9 +1470,9 @@ function openRecord(type, id = null, defaults = {}) {
         classification_status: storedRecord.classification_status || "revision"
       }
     : storedRecord;
-  $("#dialog-title").textContent = `${id ? "Editar" : "Nuevo"} ${labelForType(type)}`;
-  $("#delete-record").classList.toggle("is-hidden", !id);
-  $("#dialog-fields").innerHTML = fieldSets[type].map((field) => inputForField(field, record)).join("");
+  $("#dialog-title").textContent = `${id ? "Editar" : "Nuevo"} ${labelForType(fieldSetType) || labelForType(type)}`;
+  $("#delete-record").classList.toggle("is-hidden", !id || hideDelete);
+  $("#dialog-fields").innerHTML = fieldSets[fieldSetType].map((field) => inputForField(field, record)).join("");
   bindDialogFieldHelpers(type);
   $("#record-dialog").showModal();
 }
@@ -1425,7 +1574,7 @@ function openVehicleProfile(id) {
         <h4>Datos del coche</h4>
         ${profileLine("Codigo", code || "Sin codigo")}
         ${profileLine("Tipo", vehicle.unit_type || "Sin tipo")}
-        ${profileLine("Año", vehicle.year || "Sin año")}
+        ${profileLine("AÃ±o", vehicle.year || "Sin aÃ±o")}
         ${profileLine("Color", vehicle.color || "Sin color")}
         ${profileLine("Engomado", vehicle.verification_sticker ? capitalize(vehicle.verification_sticker) : "Sin engomado")}
         ${profileLine("VIN", vehicle.vin || "Sin VIN")}
@@ -1743,13 +1892,6 @@ function vehicleAlertItems(vehicle) {
       status: statusFromDate(vehicle.second_verification_due)
     });
   }
-  if (vehicle.next_service_date && !isServiceClosed(vehicle.next_service_status)) {
-    items.push({
-      title: `Servicio - ${vehicleKey(vehicle) || "Vehiculo"}`,
-      detail: vehicle.model || vehicle.plates || "Calendario del vehiculo",
-      status: statusFromDate(vehicle.next_service_date)
-    });
-  }
   return items;
 }
 
@@ -1829,8 +1971,8 @@ function barRow(label, value, max, className) {
 
 function metaFor(type, record) {
   const map = {
-    vehicles: [`Placas: ${record.plates || "N/D"}`, `Modelo: ${record.model || "N/D"}`, `Engomado: ${record.verification_sticker || "N/D"}`, `Chofer: ${record.driver_name || "Sin asignar"}`, `Prox. servicio: ${record.next_service_date || "Sin fecha"}`],
-    drivers: [`Codigo: ${record.internal_code || "N/D"}`, `Telefono: ${record.phone || "N/D"}`, `Vehiculo: ${record.vehicle_assigned || "Sin asignar"}`, `Licencia: ${record.license_expiration || "Sin fecha"}`, `Contrato: ${record.contract_start || "N/D"} a ${record.contract_end || "N/D"}`],
+    vehicles: [`Placas: ${record.plates || "N/D"}`, `Modelo: ${record.model || "N/D"}`, `Chofer: ${record.driver_name || "Sin asignar"}`, `Estatus: ${record.status || "N/D"}`],
+    drivers: [`Codigo: ${record.internal_code || "N/D"}`, `Telefono: ${record.phone || "N/D"}`, `Vehiculo: ${record.vehicle_assigned || "Sin asignar"}`, `Estatus: ${record.status || "N/D"}`],
     documents: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Vence: ${record.expires_at || "Sin fecha"}`],
     services: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Proximo: ${record.next_service_date || "Sin fecha"}`, `Costo: ${money(record.cost || 0)}`],
     mileage_logs: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Fecha: ${record.reading_date || "Sin fecha"}`, `Km: ${Number(record.kilometers || 0).toLocaleString("es-MX")}`],
@@ -1853,7 +1995,9 @@ function getTitle(type, record) {
 function labelForType(type) {
   return {
     vehicles: "vehiculo",
+    vehicle_admin: "administracion del vehiculo",
     drivers: "chofer",
+    driver_admin: "administracion del chofer",
     documents: "documento",
     services: "servicio",
     mileage_logs: "kilometraje",

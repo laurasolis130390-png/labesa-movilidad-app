@@ -1240,23 +1240,6 @@ textarea:focus {
   color: var(--brand-white);
 }
 
-.service-row-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.service-row-actions .small-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.service-row-actions .small-btn svg {
-  width: 16px;
-  height: 16px;
-  fill: currentColor;
-}
-
 .service-row p {
   margin: 0;
 }
@@ -4235,6 +4218,108 @@ textarea:focus {
 }
 
 .vehicle-clean-actions .small-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.admin-hero-panel {
+  border-color: rgba(36, 215, 199, 0.2);
+  background:
+    radial-gradient(circle at top right, rgba(36, 215, 199, 0.14), transparent 36%),
+    linear-gradient(145deg, rgba(8, 34, 57, 0.94), rgba(8, 16, 28, 0.94));
+}
+
+.admin-alert-list {
+  margin-top: 12px;
+}
+
+.admin-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.admin-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(0, 188, 212, 0.12), transparent 34%),
+    rgba(10, 19, 32, 0.88);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+}
+
+.admin-card-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.admin-card-head strong,
+.admin-doc-row strong {
+  display: block;
+  color: #ffffff;
+}
+
+.admin-card-head small,
+.admin-doc-row small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.admin-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--accent);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.admin-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.admin-doc-list {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-doc-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.admin-doc-row:first-child {
+  border-top: 0;
+}
+
+.admin-doc-row a {
+  color: var(--cyan);
+  text-decoration: none;
+  font-weight: 800;
+}
+
+.admin-edit-btn {
+  width: 100%;
+  justify-content: center;
+  min-height: 42px;
+}
+
+.admin-edit-btn svg {
   width: 16px;
   height: 16px;
   fill: currentColor;
