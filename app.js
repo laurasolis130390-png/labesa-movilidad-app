@@ -372,6 +372,7 @@ function renderDashboard() {
   const alertItems = collectAlerts();
   const finance = financeTotals();
   const greeting = greetingForTime();
+  const alertTarget = dashboardAlertTargetView();
 
   $("#dashboard-view").innerHTML = `
     <section class="dashboard-intro">
@@ -389,7 +390,7 @@ function renderDashboard() {
         <h3>Alertas prioritarias</h3>
         <p>${alertItems.length ? `Tienes ${alertItems.length} alerta${alertItems.length === 1 ? "" : "s"} activa${alertItems.length === 1 ? "" : "s"} que requieren atencion.` : "No hay vencimientos criticos por ahora."}</p>
       </div>
-      <button class="ghost-btn alert-summary-action" data-view="vehicles" type="button">Ver alertas ${navIcon("chevron")}</button>
+      <button class="ghost-btn alert-summary-action" data-view="${alertTarget}" data-alert-shortcut="true" type="button">Ver alertas ${navIcon("chevron")}</button>
     </section>
 
     <section class="fleet-hero-card">
@@ -405,7 +406,7 @@ function renderDashboard() {
       ${premiumStatCard("Vehiculos", state.vehicles.length, `${activeVehicles} activos`, "car", "teal", "vehicles")}
       ${premiumStatCard("Conductores", state.drivers.length, "capturados", "user", "purple", "drivers")}
       ${premiumStatCard("Calendario", alertItems.length, "proximos eventos", "calendar", "blue", "services")}
-      ${premiumStatCard("Ingresos", money(finance.rentas), "rentas cobradas", "money", "green", "finance")}
+      ${premiumStatCard("Liquidez", money(finance.liquidez), "caja disponible", "money", "green", "finance")}
     </div>
 
     <section class="module-panel premium-actions-panel">
@@ -427,9 +428,22 @@ function renderDashboard() {
   $$("#dashboard-view [data-view]").forEach((button) =>
     button.addEventListener("click", () => {
       switchView(button.dataset.view);
+      if (button.dataset.alertShortcut === "true" && button.dataset.view === "services") {
+        const filter = $(`[data-filter="services"]`);
+        if (filter) {
+          filter.value = "priority";
+          filterRecords("services");
+        }
+      }
       if (button.dataset.quickCreate) openRecord(button.dataset.quickCreate);
     })
   );
+}
+
+function dashboardAlertTargetView() {
+  const hasServiceAlerts = state.services.some((record) => !isServiceClosed(record.status) && ["yellow", "red"].includes(statusForRecord("services", record).key))
+    || state.vehicles.some((vehicle) => vehicle.next_service_date && !isServiceClosed(vehicle.next_service_status) && ["yellow", "red"].includes(statusFromDate(vehicle.next_service_date).key));
+  return hasServiceAlerts ? "services" : "vehicles";
 }
 
 function greetingForTime(date = new Date()) {
@@ -586,7 +600,9 @@ function renderServicesModule(title, subtitle) {
         <input data-search="services" placeholder="Buscar por coche, taller o nota" />
         <select data-filter="services">
           <option value="">Todos los estatus</option>
+          <option value="priority">Pendientes y vencidos</option>
           <option value="yellow">Pendiente/programado</option>
+          <option value="red">Vencidos</option>
           <option value="green">Realizado</option>
           <option value="gray">Sin fecha</option>
         </select>
@@ -1185,6 +1201,7 @@ function filterRecords(type) {
   const records = state[type].filter((record) => {
     const textMatch = JSON.stringify(record).toLowerCase().includes(query);
     const status = statusForRecord(type, record).key;
+    if (color === "priority") return textMatch && ["yellow", "red"].includes(status);
     return textMatch && (!color || status === color);
   });
   if (type === "services") {
