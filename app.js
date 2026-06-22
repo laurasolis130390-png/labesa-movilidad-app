@@ -61,11 +61,8 @@ const fieldSets = {
     ["tax_expires_at", "Vencimiento refrendo / tenencia", "date"],
     ["insurance_expires_at", "Vencimiento de seguro", "date"],
     ["gps_expires_at", "Vencimiento GPS", "date"],
-    ["circulation_card_photo_url", "Tarjeta de circulacion (URL publica)", "url"],
     ["__file_circulation_card_photo_url", "Subir foto de tarjeta de circulacion", "file", "vehicle-documents", "circulation_card_photo_url", "image/*"],
-    ["plates_photo_url", "Placas (URL publica)", "url"],
     ["__file_plates_photo_url", "Subir foto de placas", "file", "vehicle-documents", "plates_photo_url", "image/*"],
-    ["insurance_policy_photo_url", "Poliza de seguro (URL publica)", "url"],
     ["__file_insurance_policy_photo_url", "Subir PDF de poliza de seguro", "file", "vehicle-documents", "insurance_policy_photo_url", ".pdf,application/pdf"],
     ["notes", "Observaciones administrativas", "textarea"]
   ],
@@ -91,17 +88,13 @@ const fieldSets = {
     ["full_name", "Nombre completo", "text"],
     ["phone", "Telefono", "tel"],
     ["vehicle_assigned", "Vehiculo asignado", "vehicle-select"],
-    ["photo_url", "Foto del chofer (URL publica)", "url"],
     ["__file_photo_url", "Subir foto del chofer", "file", "driver-photos", "photo_url"],
-    ["ine_photo_url", "Foto INE (URL publica)", "url"],
     ["__file_ine_photo_url", "Subir foto INE", "file", "driver-photos", "ine_photo_url", "image/*"],
     ["license", "Licencia", "text"],
     ["license_expiration", "Vencimiento de licencia", "date"],
-    ["license_photo_url", "Licencia del chofer (URL publica)", "url"],
     ["__file_license_photo_url", "Subir foto de licencia", "file", "driver-photos", "license_photo_url", "image/*"],
     ["contract_end", "Termino de contrato", "date"],
     ["contract_renewal_date", "Renovacion de contrato", "date"],
-    ["contract_file_url", "Contrato o responsiva (URL publica)", "url"],
     ["__file_contract_file_url", "Subir PDF contrato/responsiva", "file", "driver-photos", "contract_file_url", ".pdf,application/pdf"],
     ["notes", "Observaciones administrativas", "textarea"]
   ],
@@ -605,7 +598,7 @@ function renderAdminModule() {
       <div class="panel-header">
         <div>
           <h3>Administracion</h3>
-          <p>Vencimientos, documentos y pendientes por coche y chofer.</p>
+          <p>Resumen Alertas</p>
         </div>
         <span class="traffic ${alerts.length ? "yellow" : "green"}">${alerts.length ? `${alerts.length} alerta${alerts.length === 1 ? "" : "s"}` : "Todo en orden"}</span>
       </div>
@@ -651,28 +644,13 @@ function renderAdminModule() {
 
 function adminVehicleCard(vehicle) {
   const title = vehicleKey(vehicle) || "Vehiculo";
-  const summaryStatus = vehicleCalendarStatus(vehicle);
-  const rows = [
-    adminDateRow("Verificacion 1er semestre", vehicle.first_verification_due, isVerificationDone(vehicle.first_verification_status) ? { key: "green", label: "Verificado" } : statusFromDate(vehicle.first_verification_due)),
-    adminDateRow("Verificacion 2do semestre", vehicle.second_verification_due, isVerificationDone(vehicle.second_verification_status) ? { key: "green", label: "Verificado" } : statusFromDate(vehicle.second_verification_due)),
-    adminDateRow("Tarjeta de circulacion", vehicle.registration_expires_at, statusFromDate(vehicle.registration_expires_at), vehicle.circulation_card_photo_url),
-    adminFileRow("Placas", vehicle.plates_photo_url),
-    adminDateRow("Refrendo / tenencia", vehicle.tax_expires_at, statusFromDate(vehicle.tax_expires_at)),
-    adminDateRow("Seguro", vehicle.insurance_expires_at, statusFromDate(vehicle.insurance_expires_at), vehicle.insurance_policy_photo_url),
-    adminDateRow("GPS", vehicle.gps_expires_at, statusFromDate(vehicle.gps_expires_at))
-  ];
   return `
-    <article class="admin-card">
+    <article class="admin-card admin-card-compact">
       <div class="admin-card-head">
         <span class="admin-icon">${navIcon("car")}</span>
         <span>
           <strong>${escapeHtml(title)}</strong>
-          <small>${escapeHtml([vehicle.brand, vehicle.model, vehicle.plates].filter(Boolean).join(" - ") || "Sin datos del vehiculo")}</small>
         </span>
-        <em class="traffic ${summaryStatus.key}">${summaryStatus.label}</em>
-      </div>
-      <div class="admin-doc-list">
-        ${rows.join("")}
       </div>
       <button class="small-btn admin-edit-btn" data-admin-vehicle="${vehicle.id}" type="button">${navIcon("edit")} Editar administracion</button>
     </article>
@@ -680,28 +658,13 @@ function adminVehicleCard(vehicle) {
 }
 
 function adminDriverCard(driver) {
-  const licenseStatus = statusFromDate(driver.license_expiration);
-  const contractStatus = statusFromDate(driver.contract_end || driver.contract_renewal_date);
-  const summaryStatus = [licenseStatus, contractStatus].some((item) => item.key === "red")
-    ? { key: "red", label: "Vencido" }
-    : [licenseStatus, contractStatus].some((item) => item.key === "yellow")
-      ? { key: "yellow", label: "Proximo" }
-      : { key: "green", label: "Vigente" };
   return `
-    <article class="admin-card">
+    <article class="admin-card admin-card-compact">
       <div class="admin-card-head">
         <span class="admin-icon">${navIcon("user")}</span>
         <span>
           <strong>${escapeHtml(driver.full_name || "Chofer")}</strong>
-          <small>${escapeHtml([driver.phone, driver.vehicle_assigned || "Sin vehiculo asignado"].filter(Boolean).join(" - "))}</small>
         </span>
-        <em class="traffic ${summaryStatus.key}">${summaryStatus.label}</em>
-      </div>
-      <div class="admin-doc-list">
-        ${adminFileRow("Foto del chofer", driver.photo_url)}
-        ${adminFileRow("INE", driver.ine_photo_url)}
-        ${adminDateRow("Licencia", driver.license_expiration, licenseStatus, driver.license_photo_url)}
-        ${adminDateRow("Contrato / responsiva", driver.contract_end || driver.contract_renewal_date, contractStatus, driver.contract_file_url)}
       </div>
       <button class="small-btn admin-edit-btn" data-admin-driver="${driver.id}" type="button">${navIcon("edit")} Editar administracion</button>
     </article>
@@ -1195,6 +1158,48 @@ function financeModuleCard(title, value, detail, tone) {
   `;
 }
 
+function financeFoldPanel(type, title, subtitle, bucket = "") {
+  const records = bucket ? financeRecords(type, bucket) : state[type];
+  const createBucket = bucket ? ` data-finance-bucket="${bucket}"` : "";
+  return `
+    <details class="module-panel finance-fold-panel">
+      <summary>
+        <span>
+          <strong>${title}</strong>
+          <small>${subtitle}</small>
+        </span>
+        <span>Ver detalle</span>
+      </summary>
+      <div class="finance-fold-body">
+        <button class="primary-btn" data-create="${type}"${createBucket} type="button">Agregar</button>
+        <div class="finance-list" data-grid="${type}">
+          ${records.map((record) => financeRow(type, record)).join("") || `<div class="empty-state">Sin movimientos.</div>`}
+        </div>
+      </div>
+    </details>
+  `;
+}
+
+function loanFoldPanel() {
+  return `
+    <details class="module-panel finance-fold-panel loan-summary-panel">
+      <summary>
+        <span>
+          <strong>Prestamos</strong>
+          <small>Dinero prestado, recuperado y saldo por cobrar.</small>
+        </span>
+        <span>Ver detalle</span>
+      </summary>
+      <div class="finance-fold-body">
+        <button class="primary-btn" data-create="loans" type="button">Agregar prestamo</button>
+        <div class="finance-list" data-grid="loans">
+          ${state.loans.map((record) => loanRow(record)).join("") || `<div class="empty-state">Sin prestamos registrados.</div>`}
+        </div>
+      </div>
+    </details>
+  `;
+}
+
 function financeMigrationRow(type, record) {
   const bucket = financeBucket(type, record);
   const status = financeBucketStatus(type, record);
@@ -1267,18 +1272,6 @@ function renderFinance() {
       ${financeModuleCard("Utilidad operativa", money(totals.utilidadOperativa), "No incluye compra de activos", "blue")}
     </div>
 
-    <section class="module-panel finance-review-panel">
-      <div class="panel-header">
-        <div>
-          <h3>Reclasificacion sugerida</h3>
-          <p>Revisa los movimientos existentes. Si algo quedo mal, toca el registro y cambia el modulo financiero.</p>
-        </div>
-      </div>
-      <div class="finance-list">
-        ${financeMigrationPreview()}
-      </div>
-    </section>
-
     <section class="module-panel profitability-card">
       <div class="panel-header">
         <div>
@@ -1291,24 +1284,13 @@ function renderFinance() {
       </div>
     </section>
 
-    <div class="dashboard-layout">
-      ${financePanel("income", "Inversion", "Capital inicial y aportaciones posteriores.", "inversion")}
-      ${financePanel("income", "Rentas", "Ingresos cobrados por renta de vehiculos.", "renta")}
-      ${financePanel("expenses", "Activos", "Compra de vehiculos y gastos antes de operar.", "activo")}
-      ${financePanel("expenses", "Mantenimiento", "Servicios, refacciones y reparaciones por vehiculo.", "mantenimiento")}
-      ${financePanel("expenses", "Otros egresos", "Salidas de dinero que no son activos ni mantenimiento.", "otro_egreso")}
-      <section class="module-panel loan-summary-panel">
-        <div class="panel-header">
-          <div>
-            <h3>Prestamos</h3>
-            <p>Dinero prestado, recuperado y saldo por cobrar.</p>
-          </div>
-          <button class="primary-btn" data-create="loans" type="button">Agregar prestamo</button>
-        </div>
-        <div class="finance-list" data-grid="loans">
-          ${state.loans.map((record) => loanRow(record)).join("") || `<div class="empty-state">Sin prestamos registrados.</div>`}
-        </div>
-      </section>
+    <div class="dashboard-layout finance-fold-layout">
+      ${financeFoldPanel("income", "Inversion", "Capital inicial y aportaciones posteriores.", "inversion")}
+      ${financeFoldPanel("income", "Rentas", "Ingresos cobrados por renta de vehiculos.", "renta")}
+      ${financeFoldPanel("expenses", "Activos", "Compra de vehiculos y gastos antes de operar.", "activo")}
+      ${financeFoldPanel("expenses", "Mantenimiento", "Servicios, refacciones y reparaciones por vehiculo.", "mantenimiento")}
+      ${financeFoldPanel("expenses", "Otros egresos", "Salidas de dinero que no son activos ni mantenimiento.", "otro_egreso")}
+      ${loanFoldPanel()}
     </div>
   `;
   bindModule("income");

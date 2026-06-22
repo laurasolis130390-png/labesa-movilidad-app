@@ -4325,6 +4325,71 @@ textarea:focus {
   fill: currentColor;
 }
 
+.admin-card-compact {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.admin-card-compact .admin-card-head {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.finance-fold-layout {
+  align-items: start;
+}
+
+.finance-fold-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.finance-fold-panel summary {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.finance-fold-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.finance-fold-panel summary strong {
+  display: block;
+  color: #ffffff;
+  font-size: 1.05rem;
+}
+
+.finance-fold-panel summary small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.finance-fold-panel summary > span:last-child {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: var(--brand-cyan);
+  background: rgba(37, 215, 199, 0.1);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.finance-fold-body {
+  display: grid;
+  gap: 14px;
+  padding: 0 18px 18px;
+}
+
+.finance-fold-body .primary-btn {
+  justify-self: start;
+}
+
 .topbar {
   min-height: auto;
   justify-content: flex-start;
