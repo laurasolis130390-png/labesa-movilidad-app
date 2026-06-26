@@ -30,6 +30,7 @@ const tableMap = {
   drivers: "drivers",
   documents: "vehicle_documents",
   services: "services",
+  incidents: "incidents",
   mileage_logs: "mileage_logs",
   gps: "gps_units",
   income: "income",
@@ -109,13 +110,25 @@ const fieldSets = {
   ],
   services: [
     ["vehicle_code", "Vehiculo", "vehicle-select"],
-    ["service_type", "Tipo de servicio", "select", ["reparacion", "refaccion", "mantenimiento", "revision", "otro"]],
-    ["service_date", "Fecha de reparacion o revision", "date"],
-    ["next_service_date", "Proxima revision", "date"],
+    ["service_type", "Tipo de servicio", "select", ["mantenimiento", "refaccion", "otro"]],
+    ["service_date", "Fecha del servicio", "date"],
+    ["next_service_date", "Proximo servicio", "date"],
     ["provider", "Taller o proveedor", "text"],
     ["cost", "Costo", "number"],
     ["status", "Estatus", "select", ["pendiente", "programado", "realizado", "cancelado"]],
     ["notes", "Descripcion del servicio", "textarea"]
+  ],
+  incidents: [
+    ["vehicle_code", "Vehiculo", "vehicle-select"],
+    ["driver_name", "Chofer relacionado", "driver-select"],
+    ["incident_date", "Fecha del incidente", "date"],
+    ["incident_type", "Tipo de incidente", "select", ["choque", "rayon", "golpe", "deducible", "otro"]],
+    ["description", "Descripcion del incidente", "textarea"],
+    ["cost", "Costo", "number"],
+    ["payer", "Quien paga", "select", ["chofer", "empresa", "seguro", "compartido"]],
+    ["status", "Estatus", "select", ["pendiente", "en reparacion", "por cobrar", "cobrado", "cerrado", "cancelado"]],
+    ["__file_photo_url", "Subir foto del incidente", "file", "vehicle-documents", "photo_url", "image/*"],
+    ["notes", "Notas", "textarea"]
   ],
   mileage_logs: [
     ["vehicle_code", "Vehiculo", "vehicle-select"],
@@ -157,7 +170,7 @@ const fieldSets = {
     ["finance_bucket", "Modulo financiero", "select", ["mantenimiento", "activo", "otro_egreso"]],
     ["finance_subcategory", "Subcategoria", "text"],
     ["classification_status", "Clasificacion", "select", ["auto", "manual", "revision"]],
-    ["category", "Categoria", "select", ["gasolina", "mantenimiento", "GPS", "seguro", "refaccion", "multa", "otro"]],
+    ["category", "Categoria", "select", ["gasolina", "mantenimiento", "refaccion", "incidente", "GPS", "seguro", "multa", "otro"]],
     ["notes", "Notas", "textarea"]
   ],
   loans: [
@@ -200,6 +213,7 @@ const seed = {
     }
   ],
   services: [],
+  incidents: [],
   mileage_logs: [],
   gps: [],
   income: [
@@ -227,7 +241,7 @@ const seed = {
   loans: []
 };
 
-let state = loadLocal();
+let state = normalizeState(loadLocal());
 let activeView = "dashboard";
 let activeRecordType = null;
 let activeRecordId = null;
@@ -702,8 +716,10 @@ function adminStatusLabel(label) {
 
 function renderServicesModule(title, subtitle) {
   const records = [...(state.services || [])].sort((a, b) => String(a.service_date || "").localeCompare(String(b.service_date || "")));
+  const incidents = [...(state.incidents || [])].sort((a, b) => String(b.incident_date || "").localeCompare(String(a.incident_date || "")));
   const mileageRecords = [...(state.mileage_logs || [])].sort((a, b) => String(b.reading_date || "").localeCompare(String(a.reading_date || "")));
   const summary = serviceSummary(records);
+  const incidentTotal = sumCost(incidents);
   const view = $("#services-view");
   view.innerHTML = `
     <section class="module-panel">
@@ -715,10 +731,10 @@ function renderServicesModule(title, subtitle) {
         <button class="primary-btn" data-create="services" type="button">Agregar servicio</button>
       </div>
       <div class="stats-grid service-summary-grid">
-        ${statCard("Reparaciones", money(summary.reparacion), "historial")}
-        ${statCard("Refacciones", money(summary.refaccion), "historial")}
         ${statCard("Mantenimientos", money(summary.mantenimiento), "historial")}
-        ${statCard("Revisiones", money(summary.revision), "historial")}
+        ${statCard("Refacciones", money(summary.refaccion), "historial")}
+        ${statCard("Incidentes", money(incidentTotal), "choques y danos")}
+        ${statCard("Total servicios", money(summary.total), "sin incidentes")}
       </div>
       <div class="toolbar">
         <input data-search="services" placeholder="Buscar por coche, taller o nota" />
@@ -737,6 +753,19 @@ function renderServicesModule(title, subtitle) {
       </div>
     </section>
 
+    <section class="module-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Incidentes</h3>
+          <p>Choques, rayones, danos y cobros relacionados al chofer o seguro.</p>
+        </div>
+        <button class="primary-btn" data-create="incidents" type="button">Agregar incidente</button>
+      </div>
+      <div class="service-history" data-grid="incidents">
+        ${incidents.map(incidentRow).join("") || `<div class="empty-state">Aun no hay incidentes registrados.</div>`}
+      </div>
+    </section>
+
     <section class="module-panel mileage-panel">
       <div class="panel-header">
         <div>
@@ -751,6 +780,7 @@ function renderServicesModule(title, subtitle) {
     </section>
   `;
   bindModule("services");
+  bindModule("incidents");
   bindModule("mileage_logs");
 }
 
@@ -760,7 +790,7 @@ function serviceSummary(records) {
     totals[key] = (totals[key] || 0) + Number(record.cost || 0);
     totals.total += Number(record.cost || 0);
     return totals;
-  }, { reparacion: 0, refaccion: 0, mantenimiento: 0, revision: 0, otro: 0, total: 0 });
+  }, { refaccion: 0, mantenimiento: 0, otro: 0, total: 0 });
 }
 
 function serviceHistoryRow(record) {
@@ -775,9 +805,26 @@ function serviceHistoryRow(record) {
         <span class="traffic ${status.key}">${status.label}</span>
       </button>
       <div class="service-row-meta">
-        <span>Proxima revision: <b>${record.next_service_date || "Sin fecha"}</b></span>
+        <span>Proximo servicio: <b>${record.next_service_date || "Sin fecha"}</b></span>
       </div>
       ${record.notes ? `<p><b>Descripcion:</b> ${escapeHtml(record.notes)}</p>` : ""}
+    </article>
+  `;
+}
+
+function incidentRow(record) {
+  const status = statusForRecord("incidents", record);
+  return `
+    <article class="service-row" data-edit-type="incidents" data-id="${record.id}">
+      <button class="service-row-main" data-edit-type="incidents" data-id="${record.id}" type="button">
+        <span>
+          <strong>${record.incident_date || "Sin fecha"} - ${record.vehicle_code || "Sin vehiculo"}</strong>
+          <small>${capitalize(record.incident_type || "incidente")} - ${record.driver_name || "Sin chofer"} - ${money(record.cost || 0)}</small>
+        </span>
+        <span class="traffic ${status.key}">${status.label}</span>
+      </button>
+      ${record.description ? `<p><b>Descripcion:</b> ${escapeHtml(record.description)}</p>` : ""}
+      ${record.photo_url ? `<div class="service-row-meta"><a href="${escapeAttr(record.photo_url)}" target="_blank" rel="noopener">Ver foto</a></div>` : ""}
     </article>
   `;
 }
@@ -952,11 +999,12 @@ async function disconnectWialon() {
 }
 
 async function wialonRequest(server, service, params, sid = "") {
-  const url = new URL("/wialon/ajax.html", server);
-  url.searchParams.set("svc", service);
-  url.searchParams.set("params", JSON.stringify(params));
-  if (sid) url.searchParams.set("sid", sid);
-  const response = await fetch(url.toString());
+  const proxyUrl = CONFIG.WIALON_PROXY_URL || "/api/wialon";
+  const response = await fetch(proxyUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ server, service, params, sid })
+  });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 }
@@ -1111,7 +1159,7 @@ function suggestedFinanceBucket(type, record) {
   }
   if (type === "expenses") {
     if (/\b(compra|vehiculo|vehiculo|auto|unidad|placa|placas|alta|inicial|gps inicial|seguro inicial|verificacion inicial|ponerlo a trabajar|poner a trabajar)\b/.test(text)) return "activo";
-    if (/\b(mantenimiento|servicio|refaccion|refacci[oÃ³]n|llanta|llantas|aceite|freno|frenos|afinacion|afinaci[oÃ³]n|reparacion|reparaci[oÃ³]n|mano de obra|grua|gr[uÃº]a|taller)\b/.test(text)) return "mantenimiento";
+    if (/\b(mantenimiento|servicio|refaccion|refacci[oÃ³]n|llanta|llantas|aceite|freno|frenos|afinacion|afinaci[oÃ³]n|reparacion|reparaci[oÃ³]n|grua|gr[uÃº]a|taller)\b/.test(text)) return "mantenimiento";
     if (record.category === "mantenimiento" || record.category === "refaccion") return "mantenimiento";
     if (["GPS", "seguro"].includes(record.category) && /\b(inicial|alta|compra)\b/.test(text)) return "activo";
     return "otro_egreso";
@@ -1288,7 +1336,7 @@ function renderFinance() {
       ${financeFoldPanel("income", "Inversion", "Capital inicial y aportaciones posteriores.", "inversion")}
       ${financeFoldPanel("income", "Rentas", "Ingresos cobrados por renta de vehiculos.", "renta")}
       ${financeFoldPanel("expenses", "Activos", "Compra de vehiculos y gastos antes de operar.", "activo")}
-      ${financeFoldPanel("expenses", "Mantenimiento", "Servicios, refacciones y reparaciones por vehiculo.", "mantenimiento")}
+      ${financeFoldPanel("expenses", "Mantenimiento", "Servicios y refacciones por vehiculo.", "mantenimiento")}
       ${financeFoldPanel("expenses", "Otros egresos", "Salidas de dinero que no son activos ni mantenimiento.", "otro_egreso")}
       ${loanFoldPanel()}
     </div>
@@ -1350,6 +1398,9 @@ function filterRecords(type) {
   if (type === "services") {
     const sorted = records.sort((a, b) => String(a.service_date || "").localeCompare(String(b.service_date || "")));
     grid.innerHTML = sorted.map(serviceHistoryRow).join("") || `<div class="empty-state">No hay coincidencias.</div>`;
+  } else if (type === "incidents") {
+    const sorted = records.sort((a, b) => String(b.incident_date || "").localeCompare(String(a.incident_date || "")));
+    grid.innerHTML = sorted.map(incidentRow).join("") || `<div class="empty-state">No hay coincidencias.</div>`;
   } else if (type === "mileage_logs") {
     const sorted = records.sort((a, b) => String(b.reading_date || "").localeCompare(String(a.reading_date || "")));
     grid.innerHTML = sorted.map(mileageLogRow).join("") || `<div class="empty-state">No hay coincidencias.</div>`;
@@ -1441,6 +1492,7 @@ function bindDialog() {
     const saved = await upsertRemote(activeRecordType, record);
     if (!saved) return;
 
+    await syncLinkedRecords(activeRecordType, record);
     await syncFromSupabase();
     const existingIndex = state[activeRecordType].findIndex((item) => item.id === record.id);
     if (existingIndex >= 0) {
@@ -1493,6 +1545,13 @@ function applyRecordDefaults(type, record) {
   }
   if (type === "services") {
     record.status = record.status || "pendiente";
+    record.service_type = record.service_type || "mantenimiento";
+    record.service_date = record.service_date || isoDate(0);
+  }
+  if (type === "incidents") {
+    record.status = record.status || "pendiente";
+    record.incident_type = record.incident_type || "choque";
+    record.incident_date = record.incident_date || isoDate(0);
   }
   if (type === "mileage_logs") {
     record.reading_date = record.reading_date || isoDate(0);
@@ -1501,6 +1560,133 @@ function applyRecordDefaults(type, record) {
     record.finance_bucket = record.finance_bucket || suggestedFinanceBucket(type, record);
     record.classification_status = "manual";
   }
+}
+
+async function syncLinkedRecords(type, record) {
+  if (type === "services") {
+    await syncServiceToFinance(record);
+  }
+  if (type === "incidents") {
+    await syncIncidentToFinance(record);
+  }
+  if (type === "expenses") {
+    await syncExpenseToOperations(record);
+  }
+}
+
+async function syncServiceToFinance(record) {
+  const cost = Number(record.cost || 0);
+  if (!cost || !record.vehicle_code || record.status === "cancelado") return;
+  const token = `[SERV:${record.id}]`;
+  const category = record.service_type === "refaccion" ? "refaccion" : "mantenimiento";
+  const expense = linkedRecord("expenses", token) || { id: crypto.randomUUID() };
+  const notes = cleanLinkedNotes(expense.notes, token);
+  await saveLinkedRecord("expenses", {
+    ...expense,
+    vehicle_code: record.vehicle_code,
+    concept: `${capitalize(record.service_type || "mantenimiento")} - ${record.vehicle_code}`,
+    date: record.service_date || isoDate(0),
+    amount: cost,
+    finance_bucket: "mantenimiento",
+    finance_subcategory: capitalize(record.service_type || "mantenimiento"),
+    classification_status: "manual",
+    category,
+    notes: [token, record.notes || notes].filter(Boolean).join(" ")
+  });
+}
+
+async function syncIncidentToFinance(record) {
+  const cost = Number(record.cost || 0);
+  if (!cost || !record.vehicle_code || record.status === "cancelado") return;
+  const token = `[INC:${record.id}]`;
+  const expense = linkedRecord("expenses", token) || { id: crypto.randomUUID() };
+  const description = record.description || cleanLinkedNotes(expense.notes, token);
+  await saveLinkedRecord("expenses", {
+    ...expense,
+    vehicle_code: record.vehicle_code,
+    concept: `Incidente - ${capitalize(record.incident_type || "danio")} - ${record.vehicle_code}`,
+    date: record.incident_date || isoDate(0),
+    amount: cost,
+    finance_bucket: "otro_egreso",
+    finance_subcategory: "Incidente",
+    classification_status: "manual",
+    category: "incidente",
+    notes: [token, description].filter(Boolean).join(" ")
+  });
+}
+
+async function syncExpenseToOperations(record) {
+  const amount = Number(record.amount || 0);
+  if (!amount || !record.vehicle_code) return;
+  const route = operationRouteFromExpense(record);
+  if (!route) return;
+  const token = `[EXP:${record.id}]`;
+  if (route === "incident") {
+    const incident = linkedRecord("incidents", token) || { id: crypto.randomUUID() };
+    await saveLinkedRecord("incidents", {
+      ...incident,
+      vehicle_code: record.vehicle_code,
+      incident_date: record.date || isoDate(0),
+      incident_type: incidentTypeFromText(record),
+      description: cleanLinkedNotes(record.notes, "") || record.concept || "",
+      cost: amount,
+      payer: incident.payer || "empresa",
+      status: incident.status || "pendiente",
+      notes: [token, cleanLinkedNotes(record.notes, token)].filter(Boolean).join(" ")
+    });
+    return;
+  }
+  const service = linkedRecord("services", token) || { id: crypto.randomUUID() };
+  await saveLinkedRecord("services", {
+    ...service,
+    vehicle_code: record.vehicle_code,
+    service_type: route,
+    service_date: record.date || isoDate(0),
+    provider: service.provider || "",
+    cost: amount,
+    status: service.status || "realizado",
+    notes: [token, cleanLinkedNotes(record.notes, token) || record.concept || ""].filter(Boolean).join(" ")
+  });
+}
+
+function operationRouteFromExpense(record) {
+  const text = `${record.finance_bucket || ""} ${record.category || ""} ${record.concept || ""} ${record.notes || ""}`.toLowerCase();
+  if (/\b(incidente|choque|choco|choc[oó]|golpe|rayon|ray[oó]n|facia|fascia|espejo|deducible)\b/.test(text)) return "incident";
+  if (/\b(refaccion|refacci[oó]n|pieza|partes|llanta|llantas|espejo|facia|fascia)\b/.test(text)) return "refaccion";
+  if (record.finance_bucket === "mantenimiento" || record.category === "mantenimiento") return "mantenimiento";
+  if (record.finance_bucket === "activo" && /\b(servicio|aceite|freno|frenos|afinacion|afinaci[oó]n|taller|cambio)\b/.test(text)) return "mantenimiento";
+  if (record.finance_bucket === "otro_egreso" && /\b(servicio|mantenimiento|aceite|freno|frenos|taller|cambio)\b/.test(text)) return "mantenimiento";
+  return "";
+}
+
+function incidentTypeFromText(record) {
+  const text = `${record.category || ""} ${record.concept || ""} ${record.notes || ""}`.toLowerCase();
+  if (/\b(ray[oó]n|rayon|rayones)\b/.test(text)) return "rayon";
+  if (/\b(golpe|golpes)\b/.test(text)) return "golpe";
+  if (/\b(deducible|seguro)\b/.test(text)) return "deducible";
+  if (/\b(choque|choco|choc[oó])\b/.test(text)) return "choque";
+  return "otro";
+}
+
+function linkedRecord(type, token) {
+  return (state[type] || []).find((item) => String(item.notes || "").includes(token));
+}
+
+function cleanLinkedNotes(notes = "", token = "") {
+  return String(notes || "").replace(token, "").replace(/\[(SERV|INC|EXP):[^\]]+\]/g, "").trim();
+}
+
+async function saveLinkedRecord(type, record) {
+  applyRecordDefaults(type, record);
+  const saved = await upsertRemote(type, record);
+  if (!saved && hasSupabase) return false;
+  const index = state[type].findIndex((item) => item.id === record.id);
+  if (index >= 0) {
+    state[type][index] = { ...state[type][index], ...record };
+  } else {
+    state[type].push(record);
+  }
+  return true;
 }
 
 function bindDialogFieldHelpers(type) {
@@ -1736,7 +1922,7 @@ async function syncFromSupabase() {
   for (const [key, table] of Object.entries(tableMap)) {
     const { data, error } = await supabaseClient.from(table).select("*").order("created_at", { ascending: false });
     if (error) {
-      if (key === "mileage_logs" && /does not exist|schema cache|relation/i.test(error.message || "")) {
+      if (["mileage_logs", "incidents"].includes(key) && /does not exist|schema cache|relation/i.test(error.message || "")) {
         state[key] = state[key] || [];
         continue;
       }
@@ -1764,6 +1950,10 @@ async function upsertRemote(type, record) {
   if (error) {
     if (type === "mileage_logs" && /does not exist|schema cache|relation/i.test(error.message || "")) {
       alert("Falta crear la tabla de kilometrajes en Supabase. Corre el archivo mileage-logs.sql y vuelve a guardar.");
+      return false;
+    }
+    if (type === "incidents" && /does not exist|schema cache|relation/i.test(error.message || "")) {
+      alert("Falta crear la tabla de incidentes en Supabase. Corre el archivo incidents-finance-services-link.sql y vuelve a guardar.");
       return false;
     }
     alert(`No se pudo guardar en Supabase: ${error.message}`);
@@ -1810,6 +2000,12 @@ function statusForRecord(type, record) {
       return { key: "yellow", label: capitalize(record.status) };
     }
     return statusFromDate(record.next_service_date || record.service_date);
+  }
+  if (type === "incidents") {
+    const status = String(record.status || "pendiente").toLowerCase();
+    if (["cerrado", "cobrado", "cancelado"].includes(status)) return { key: "green", label: capitalize(record.status) };
+    if (["en reparacion", "por cobrar"].includes(status)) return { key: "yellow", label: capitalize(record.status) };
+    return { key: "red", label: capitalize(record.status || "pendiente") };
   }
   if (type === "gps") return statusFromDate(record.expires_at);
   if (type === "drivers") return statusFromDate(record.license_expiration);
@@ -1892,6 +2088,15 @@ function collectAlerts() {
       status: statusFromDate(record.next_service_date)
     });
   });
+  state.incidents.forEach((record) => {
+    const status = statusForRecord("incidents", record);
+    if (!["yellow", "red"].includes(status.key)) return;
+    items.push({
+      title: `Incidente - ${record.vehicle_code || "Sin vehiculo"}`,
+      detail: capitalize(record.incident_type || "pendiente"),
+      status
+    });
+  });
   state.gps.forEach((record) => items.push({
     title: record.gps_name || "GPS",
     detail: record.vehicle_code || "Sin vehiculo",
@@ -1959,6 +2164,7 @@ function metaFor(type, record) {
     drivers: [`Codigo: ${record.internal_code || "N/D"}`, `Telefono: ${record.phone || "N/D"}`, `Vehiculo: ${record.vehicle_assigned || "Sin asignar"}`, `Estatus: ${record.status || "N/D"}`],
     documents: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Vence: ${record.expires_at || "Sin fecha"}`],
     services: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Proximo: ${record.next_service_date || "Sin fecha"}`, `Costo: ${money(record.cost || 0)}`],
+    incidents: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Fecha: ${record.incident_date || "Sin fecha"}`, `Costo: ${money(record.cost || 0)}`],
     mileage_logs: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Fecha: ${record.reading_date || "Sin fecha"}`, `Km: ${Number(record.kilometers || 0).toLocaleString("es-MX")}`],
     gps: [`Vehiculo: ${record.vehicle_code || "N/D"}`, `Conexion: ${record.last_connection || "Sin dato"}`, `Vence: ${record.expires_at || "Sin fecha"}`]
   };
@@ -1970,6 +2176,7 @@ function getTitle(type, record) {
   if (type === "drivers") return `${record.internal_code || "Chofer"} - ${record.full_name || ""}`.trim();
   if (type === "documents") return record.document_name || "Documento";
   if (type === "services") return record.service_type || "Servicio";
+  if (type === "incidents") return `${capitalize(record.incident_type || "Incidente")} - ${record.vehicle_code || "Sin vehiculo"}`;
   if (type === "mileage_logs") return `${record.vehicle_code || "Vehiculo"} - ${Number(record.kilometers || 0).toLocaleString("es-MX")} km`;
   if (type === "gps") return record.gps_name || "Unidad GPS";
   if (type === "loans") return record.borrower_name || "Prestamo";
@@ -1984,6 +2191,7 @@ function labelForType(type) {
     driver_admin: "administracion del chofer",
     documents: "documento",
     services: "servicio",
+    incidents: "incidente",
     mileage_logs: "kilometraje",
     gps: "GPS",
     income: "ingreso",
@@ -2000,12 +2208,24 @@ function loadLocal() {
   }
 }
 
+function normalizeState(data) {
+  const normalized = data && typeof data === "object" ? data : {};
+  Object.keys(seed).forEach((key) => {
+    if (!Array.isArray(normalized[key])) normalized[key] = [];
+  });
+  return normalized;
+}
+
 function persist() {
   localStorage.setItem(STORE_KEY, JSON.stringify(state));
 }
 
 function sum(records) {
   return records.reduce((total, item) => total + Number(item.amount || 0), 0);
+}
+
+function sumCost(records) {
+  return records.reduce((total, item) => total + Number(item.cost || 0), 0);
 }
 
 function money(value) {
